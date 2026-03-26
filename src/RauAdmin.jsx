@@ -359,8 +359,9 @@ const Panel = ({ children, style }) => (
 
 const Modal = ({ open, onClose, title, width, children }) => {
   if (!open) return null;
-  return <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}>
-    <div onClick={e => e.stopPropagation()} style={{ background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 6, width: "94%", maxWidth: width || 560, maxHeight: "85vh", overflow: "auto" }}>
+  const mobile = window.innerWidth < 768;
+  return <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: mobile ? "flex-end" : "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}>
+    <div onClick={e => e.stopPropagation()} style={{ background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: mobile ? "12px 12px 0 0" : 6, width: mobile ? "100%" : "94%", maxWidth: mobile ? "100%" : (width || 560), maxHeight: mobile ? "90vh" : "85vh", overflow: "auto" }}>
       <div style={{ padding: "18px 22px", borderBottom: `1px solid ${C.panelBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: C.panel, zIndex: 1 }}>
         <span style={{ fontSize: 12, letterSpacing: "0.25em", color: C.gold, fontWeight: 500 }}>{title}</span>
         <span onClick={onClose} style={{ cursor: "pointer", color: C.textMuted, fontSize: 20, lineHeight: 1, padding: "4px 8px", borderRadius: 3, transition: "all 0.2s" }}
@@ -383,7 +384,34 @@ const ChartTip = ({ active, payload }) => {
    MAIN APP
    ═══════════════════════════════════════════ */
 export default function AdminDashboard() {
-  const [sideOpen, setSideOpen] = useState(true);
+  // PIN lock
+  const [pinLocked, setPinLocked] = useState(() => !sessionStorage.getItem("rau_unlocked"));
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState(false);
+  const PIN_CODE = "2026";
+
+  const checkPin = () => {
+    if (pinInput === PIN_CODE) {
+      sessionStorage.setItem("rau_unlocked", "true");
+      setPinLocked(false);
+      setPinInput("");
+      setPinError(false);
+    } else {
+      setPinError(true);
+      setPinInput("");
+    }
+  };
+
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const [sideOpen, setSideOpen] = useState(!isMobile);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [nav, setNav] = useState("dashboard");
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -701,7 +729,7 @@ export default function AdminDashboard() {
   const monthlyRevenue = clients.filter(c => c.status === "active").reduce((s, c) => s + c.monthlyFee, 0);
   const pendingServices = services.filter(s => s.status !== "completed").length;
   const unreadMessages = messages.filter(m => !m.read).length;
-  const sw = sideOpen ? 220 : 58;
+  const sw = isMobile ? 0 : (sideOpen ? 220 : 58);
 
   const getVehicle = (vid) => allVehicles.find(v => v.id === vid);
   const getClient = (cid) => clients.find(c => c.id === cid);
@@ -711,7 +739,7 @@ export default function AdminDashboard() {
   const renderDashboard = () => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* ─── 3D HERO ─── */}
-      <div style={{ flex: "1 1 50%", position: "relative", minHeight: 320 }}>
+      <div style={{ flex: isMobile ? "0 0 250px" : "1 1 50%", position: "relative", minHeight: isMobile ? 250 : 320 }}>
         <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
 
         {/* No 3D model placeholder */}
@@ -729,24 +757,26 @@ export default function AdminDashboard() {
         )}
 
         {/* Top-left: greeting */}
-        <div style={{ position: "absolute", top: 24, left: 28, zIndex: 10 }}>
-          <div style={{ fontSize: 20, color: C.white, fontWeight: 300 }}>Goedemorgen, Anton</div>
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>Dinsdag 25 maart 2026 — {allVehicles.length} wagens in beheer</div>
+        <div style={{ position: "absolute", top: isMobile ? 12 : 24, left: isMobile ? 16 : 28, zIndex: 10 }}>
+          <div style={{ fontSize: isMobile ? 16 : 20, color: C.white, fontWeight: 300 }}>Goedemorgen, Anton</div>
+          {!isMobile && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>Dinsdag 25 maart 2026 — {allVehicles.length} wagens in beheer</div>}
         </div>
 
         {/* Top-right: action */}
+        {!isMobile && (
         <div style={{ position: "absolute", top: 24, right: 28, zIndex: 10 }}>
           <Btn primary onClick={() => setNewServiceOpen(true)}>+ NIEUWE SERVICE</Btn>
         </div>
+        )}
 
         {/* Center vehicle info */}
-        <div style={{ position: "absolute", bottom: 80, left: 28, zIndex: 10 }}>
+        <div style={{ position: "absolute", bottom: isMobile ? 60 : 80, left: isMobile ? 16 : 28, zIndex: 10 }}>
           <div style={{ fontSize: 9, letterSpacing: "0.4em", color: C.textMuted, marginBottom: 6 }}>IN FOCUS</div>
-          <div style={{ fontSize: 28, fontWeight: 200, letterSpacing: "0.06em", color: C.white }}>{dashVehicle?.make} {dashVehicle?.name}</div>
-          <div style={{ fontSize: 12, color: C.gold, letterSpacing: "0.15em", marginTop: 4 }}>
+          <div style={{ fontSize: isMobile ? 18 : 28, fontWeight: 200, letterSpacing: "0.06em", color: C.white }}>{dashVehicle?.make} {dashVehicle?.name}</div>
+          <div style={{ fontSize: isMobile ? 10 : 12, color: C.gold, letterSpacing: "0.15em", marginTop: 4 }}>
             {dashVehicle?.plate} · {dashVehicle?.color} · {dashVehicle?.mileage}
           </div>
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>Eigenaar: {dashVehicle?.clientName}</div>
+          {!isMobile && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>Eigenaar: {dashVehicle?.clientName}</div>}
           {dashVehicle && getLinkedModel(dashVehicle.id) && (
             <div style={{ fontSize: 10, color: C.gold, fontFamily: mono, marginTop: 4, opacity: 0.7 }}>
               {getLinkedBrand(getLinkedModel(dashVehicle.id))?.name} {getLinkedModel(dashVehicle.id)?.name}
@@ -755,19 +785,21 @@ export default function AdminDashboard() {
         </div>
 
         {/* Center-right value + status */}
+        {!isMobile && (
         <div style={{ position: "absolute", bottom: 80, right: 28, zIndex: 10, textAlign: "right" }}>
           <div style={{ fontSize: 9, letterSpacing: "0.3em", color: C.textMuted }}>WAARDE</div>
           <div style={{ fontSize: 30, fontWeight: 300, color: C.goldBright, fontFamily: mono, marginTop: 4 }}>{fmtEuro(dashVehicle?.value || 0)}</div>
           <div style={{ marginTop: 8 }}><StatusBadge status={dashVehicle?.status || "garaged"} /></div>
         </div>
+        )}
 
         {/* Vehicle selector */}
-        <div style={{ position: "absolute", bottom: 20, left: 28, right: 28, zIndex: 10, display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+        <div style={{ position: "absolute", bottom: isMobile ? 8 : 20, left: isMobile ? 8 : 28, right: isMobile ? 8 : 28, zIndex: 10, display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
           {allVehicles.map((v, i) => {
             const sel = i === dashCarIdx % allVehicles.length;
             return (
               <div key={v.id} onClick={() => setDashCarIdx(i)} style={{
-                padding: "8px 16px", flexShrink: 0,
+                padding: isMobile ? "6px 10px" : "8px 16px", flexShrink: 0,
                 background: sel ? C.surface : "rgba(8,8,8,0.8)",
                 border: `1px solid ${sel ? C.gold : C.panelBorder}`,
                 borderRadius: 3, cursor: "pointer", transition: "all 0.3s",
@@ -791,9 +823,9 @@ export default function AdminDashboard() {
       <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${C.gold}, transparent)`, opacity: 0.5, flexShrink: 0 }} />
 
       {/* ─── BOTTOM PANELS ─── */}
-      <div style={{ flex: "0 0 auto", overflowY: "auto", padding: 20 }}>
+      <div style={{ flex: "0 0 auto", overflowY: "auto", padding: isMobile ? 12 : 20 }}>
         {/* KPIs */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
           {[
             { label: "ACTIEVE KLANTEN", value: activeClients, sub: `${clients.length} totaal`, color: C.green, icon: "◇" },
             { label: "WAGENS IN BEHEER", value: allVehicles.length, sub: `${allVehicles.filter(v => v.status === "in-service").length} in service`, color: C.blue, icon: "⬡" },
@@ -811,7 +843,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr 1fr", gap: 12 }}>
           {/* Revenue chart */}
           <Panel style={{ padding: "18px 20px" }}>
             <div style={{ fontSize: 11, letterSpacing: "0.25em", color: C.text, fontWeight: 500, marginBottom: 14 }}>OMZET 6 MAANDEN</div>
@@ -881,15 +913,16 @@ export default function AdminDashboard() {
 
   /* ═══ CLIENTS ═══ */
   const renderClients = () => (
-    <div style={{ padding: 28, overflowY: "auto", height: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+    <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 10 }}>
         <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500 }}>KLANTEN ({clients.length})</div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <div style={{ width: 260 }}><SearchBar value={search} onChange={setSearch} placeholder="Zoek klant..." /></div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ width: isMobile ? "100%" : 260 }}><SearchBar value={search} onChange={setSearch} placeholder="Zoek klant..." /></div>
           <Btn primary small>+ NIEUWE KLANT</Btn>
         </div>
       </div>
-      <Panel style={{ overflow: "hidden" }}>
+      <Panel style={{ overflowX: "auto" }}>
+        <div style={{ minWidth: 700 }}>
         {/* Header */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 0.8fr", padding: "12px 20px", borderBottom: `1px solid ${C.panelBorder}`, fontSize: 9, letterSpacing: "0.2em", color: C.textDark }}>
           <span>KLANT</span><span>TIER</span><span>WAGENS</span><span>MAANDBEDRAG</span><span>TOTAAL BESTEED</span><span>STATUS</span>
@@ -910,13 +943,14 @@ export default function AdminDashboard() {
             <StatusBadge status={c.status} />
           </Hov>
         ))}
+        </div>
       </Panel>
     </div>
   );
 
   /* ═══ FLEET ═══ */
   const renderFleet = () => (
-    <div style={{ padding: 28, overflowY: "auto", height: "100%" }}>
+    <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
       {/* Flash message */}
       {settingsMsg && (
         <div style={{ padding: "12px 18px", background: C.greenBg, border: `1px solid ${C.green}40`, borderRadius: 4, marginBottom: 16, fontSize: 12, color: C.green }}>
@@ -934,7 +968,7 @@ export default function AdminDashboard() {
           <Btn primary onClick={() => { resetVehicleForm(); setEditingVehicleId(null); setNewVehicleOpen(true); }}>+ NIEUW VOERTUIG</Btn>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
         {allVehicles.filter(v => !search || `${v.make} ${v.name} ${v.plate} ${v.clientName}`.toLowerCase().includes(search.toLowerCase())).map(v => {
           const linkedModel = getLinkedModel(v.id);
           const linkedBrand = getLinkedBrand(linkedModel);
@@ -1031,7 +1065,7 @@ export default function AdminDashboard() {
   const renderServices = () => {
     const filtered = services.filter(s => serviceFilter === "all" || s.status === serviceFilter);
     return (
-      <div style={{ padding: 28, overflowY: "auto", height: "100%" }}>
+      <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500 }}>SERVICE PLANNING</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1075,7 +1109,7 @@ export default function AdminDashboard() {
     const filtered = invoices.filter(inv => invoiceFilter === "all" || inv.status === invoiceFilter);
     const totalPending = invoices.filter(i => i.status === "pending" || i.status === "overdue").reduce((s, i) => s + i.amount, 0);
     return (
-      <div style={{ padding: 28, overflowY: "auto", height: "100%" }}>
+      <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500 }}>FACTURATIE</div>
@@ -1114,7 +1148,7 @@ export default function AdminDashboard() {
 
   /* ═══ MESSAGES ═══ */
   const renderMessages = () => (
-    <div style={{ padding: 28, overflowY: "auto", height: "100%" }}>
+    <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500 }}>BERICHTEN</div>
         <Btn primary small onClick={() => setComposeOpen(true)}>+ NIEUW BERICHT</Btn>
@@ -1149,7 +1183,7 @@ export default function AdminDashboard() {
 
   /* ═══ TEAM ═══ */
   const renderTeam = () => (
-    <div style={{ padding: 28, overflowY: "auto", height: "100%" }}>
+    <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
       <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500, marginBottom: 20 }}>TEAM ({team.length})</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
         {team.map(t => (
@@ -1187,7 +1221,7 @@ export default function AdminDashboard() {
     const selectStyle = { ...inputStyle };
 
     return (
-      <div style={{ padding: 28, overflowY: "auto", height: "100%" }}>
+      <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
         <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500, marginBottom: 20 }}>INSTELLINGEN</div>
 
         {/* Flash message */}
@@ -1400,25 +1434,129 @@ export default function AdminDashboard() {
   /* ═══════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════ */
+
+  // ── PIN LOCK SCREEN ──
+  if (pinLocked) {
+    return (
+      <div style={{ width: "100%", height: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans }}>
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ width: 50, height: 50, border: `2px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: mono, fontSize: 18, color: C.gold, fontWeight: 600, margin: "0 auto 24px" }}>R</div>
+          <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: "0.22em", color: C.white, marginBottom: 6 }}>RAÚ</div>
+          <div style={{ fontSize: 9, letterSpacing: "0.35em", color: C.textMuted, marginBottom: 40 }}>ADMIN CONSOLE</div>
+
+          <div style={{ fontSize: 11, letterSpacing: "0.2em", color: C.textMuted, marginBottom: 16 }}>VOER PINCODE IN</div>
+
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 20 }}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} style={{
+                width: 48, height: 56, borderRadius: 6,
+                border: `2px solid ${pinError ? C.red : (pinInput.length > i ? C.gold : C.panelBorder)}`,
+                background: C.panel, display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 24, color: C.gold, fontFamily: mono, transition: "all 0.2s",
+              }}>
+                {pinInput.length > i ? "•" : ""}
+              </div>
+            ))}
+          </div>
+
+          {pinError && <div style={{ fontSize: 12, color: C.red, marginBottom: 16 }}>Onjuiste pincode</div>}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 64px)", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+            {[1,2,3,4,5,6,7,8,9,null,0,"←"].map((n, i) => {
+              if (n === null) return <div key={i} />;
+              return (
+                <div key={i} onClick={() => {
+                  setPinError(false);
+                  if (n === "←") { setPinInput(p => p.slice(0, -1)); return; }
+                  const newPin = pinInput + String(n);
+                  setPinInput(newPin);
+                  if (newPin.length === 4) {
+                    setTimeout(() => {
+                      if (newPin === PIN_CODE) {
+                        sessionStorage.setItem("rau_unlocked", "true");
+                        setPinLocked(false);
+                        setPinInput("");
+                      } else {
+                        setPinError(true);
+                        setPinInput("");
+                      }
+                    }, 200);
+                  }
+                }} style={{
+                  width: 64, height: 56, borderRadius: 8,
+                  background: C.panel, border: `1px solid ${C.panelBorder}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: n === "←" ? 20 : 22, color: C.text, fontFamily: mono,
+                  cursor: "pointer", transition: "all 0.15s", userSelect: "none",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = C.surfaceHover; e.currentTarget.style.borderColor = C.goldDim; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = C.panel; e.currentTarget.style.borderColor = C.panelBorder; }}
+                >{n}</div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── MAIN APP ──
   return (
     <div style={{ width: "100%", height: "100vh", background: C.bg, color: C.white, fontFamily: sans, overflow: "hidden", position: "relative", letterSpacing: "0.03em" }}>
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.goldDim};border-radius:2px}
-        *{scrollbar-width:thin;scrollbar-color:${C.goldDim} transparent}
+        *{scrollbar-width:thin;scrollbar-color:${C.goldDim} transparent;box-sizing:border-box}
         input::placeholder{color:${C.textDark}}
         textarea::placeholder{color:${C.textDark}}
         textarea{resize:vertical}
+        select{appearance:auto}
       `}</style>
 
       <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,0.4) 100%)" }} />
 
-      {/* Sidebar */}
-      <nav style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: sw, zIndex: 100, background: C.panel, borderRight: `1px solid ${C.panelBorder}`, transition: "width 0.35s cubic-bezier(0.4,0,0.2,1)", display: "flex", flexDirection: "column", opacity: loaded ? 1 : 0 }}>
-        <div onClick={() => setSideOpen(!sideOpen)} style={{ padding: sideOpen ? "22px 20px" : "22px 14px", borderBottom: `1px solid ${C.panelBorder}`, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "padding 0.35s" }}>
+      {/* Mobile header */}
+      {isMobile && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, height: 52, zIndex: 110,
+          background: C.panel, borderBottom: `1px solid ${C.panelBorder}`,
+          display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px",
+        }}>
+          <div onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ cursor: "pointer", padding: 8, fontSize: 20, color: C.textMuted }}>☰</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 24, height: 24, border: `1.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: mono, fontSize: 10, color: C.gold, fontWeight: 600 }}>R</div>
+            <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.2em", color: C.white }}>RAÚ</span>
+          </div>
+          <div style={{ width: 36 }} />
+        </div>
+      )}
+
+      {/* Mobile overlay */}
+      {isMobile && mobileMenuOpen && (
+        <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 115 }} />
+      )}
+
+      {/* Sidebar — desktop: fixed, mobile: slide-over */}
+      <nav style={{
+        position: "fixed", top: isMobile ? 0 : 0, left: 0, bottom: 0,
+        width: isMobile ? 260 : (sideOpen ? 220 : 58),
+        zIndex: isMobile ? 120 : 100,
+        background: C.panel, borderRight: `1px solid ${C.panelBorder}`,
+        transition: isMobile ? "transform 0.3s ease" : "width 0.35s cubic-bezier(0.4,0,0.2,1)",
+        transform: isMobile ? (mobileMenuOpen ? "translateX(0)" : "translateX(-100%)") : "none",
+        display: "flex", flexDirection: "column",
+        opacity: loaded ? 1 : 0,
+      }}>
+        <div onClick={() => isMobile ? setMobileMenuOpen(false) : setSideOpen(!sideOpen)} style={{
+          padding: (isMobile || sideOpen) ? "22px 20px" : "22px 14px",
+          borderBottom: `1px solid ${C.panelBorder}`,
+          display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "padding 0.35s",
+        }}>
           <div style={{ width: 30, height: 30, border: `1.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: mono, fontSize: 13, color: C.gold, fontWeight: 600, flexShrink: 0 }}>R</div>
-          {sideOpen && <div>
+          {(isMobile || sideOpen) && <div>
             <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: "0.22em", color: C.white }}>RAÚ</div>
             <div style={{ fontSize: 7, letterSpacing: "0.35em", color: C.textMuted }}>ADMIN CONSOLE</div>
           </div>}
@@ -1429,9 +1567,9 @@ export default function AdminDashboard() {
             const a = nav === it.id;
             const hasNotif = it.id === "messages" && unreadMessages > 0;
             return (
-              <div key={it.id} onClick={() => { setNav(it.id); setSearch(""); }} style={{
+              <div key={it.id} onClick={() => { setNav(it.id); setSearch(""); if (isMobile) setMobileMenuOpen(false); }} style={{
                 display: "flex", alignItems: "center", gap: 12,
-                padding: sideOpen ? "10px 20px" : "10px 18px",
+                padding: (isMobile || sideOpen) ? "10px 20px" : "10px 18px",
                 color: a ? C.gold : C.textMuted, fontSize: 13, fontWeight: a ? 500 : 300,
                 cursor: "pointer", transition: "all 0.25s",
                 background: a ? C.goldSubtle : "transparent",
@@ -1440,17 +1578,17 @@ export default function AdminDashboard() {
                 onMouseEnter={e => { if (!a) e.currentTarget.style.background = C.surfaceHover; }}
                 onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? C.goldSubtle : "transparent"; }}>
                 <span style={{ fontSize: 15, width: 20, textAlign: "center", flexShrink: 0 }}>{it.icon}</span>
-                {sideOpen && <span style={{ letterSpacing: "0.12em", flex: 1 }}>{it.label}</span>}
-                {sideOpen && hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "1px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
+                {(isMobile || sideOpen) && <span style={{ letterSpacing: "0.12em", flex: 1 }}>{it.label}</span>}
+                {(isMobile || sideOpen) && hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "1px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
               </div>
             );
           })}
         </div>
 
-        <div style={{ padding: sideOpen ? "14px 20px" : "14px 14px", borderTop: `1px solid ${C.panelBorder}` }}>
+        <div style={{ padding: (isMobile || sideOpen) ? "14px 20px" : "14px 14px", borderTop: `1px solid ${C.panelBorder}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.goldSubtle, border: `1px solid ${C.goldDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.gold, fontWeight: 600, fontFamily: mono }}>AS</div>
-            {sideOpen && <div>
+            {(isMobile || sideOpen) && <div>
               <div style={{ fontSize: 11, color: C.text }}>Anton S.</div>
               <div style={{ fontSize: 9, color: C.textDark }}>Beheerder</div>
             </div>}
@@ -1459,7 +1597,12 @@ export default function AdminDashboard() {
       </nav>
 
       {/* Main */}
-      <main style={{ marginLeft: sw, height: "100vh", transition: "margin-left 0.35s cubic-bezier(0.4,0,0.2,1)", display: "flex", flexDirection: "column" }}>
+      <main style={{
+        marginLeft: sw, height: "100vh",
+        paddingTop: isMobile ? 52 : 0,
+        transition: "margin-left 0.35s cubic-bezier(0.4,0,0.2,1)",
+        display: "flex", flexDirection: "column",
+      }}>
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{sections[nav]?.()}</div>
       </main>
 
