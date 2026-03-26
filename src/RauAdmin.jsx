@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabase";
 
@@ -317,23 +318,51 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
     });
   };
 
-  // Animation
-  let mx = 0, af, tr = 0, cr = 0;
-  const onM = e => { const rc = canvas.getBoundingClientRect(); mx = ((e.clientX - rc.left) / rc.width - 0.5) * 2; };
-  canvas.addEventListener("mousemove", onM);
+  // OrbitControls — drag to rotate, scroll to zoom
+  const controls = new OrbitControls(cam, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.enablePan = false;
+  controls.minDistance = 4;
+  controls.maxDistance = 16;
+  controls.minPolarAngle = 0.3;
+  controls.maxPolarAngle = Math.PI / 2.1; // Don't go below floor
+  controls.target.set(0, 0.5, 0);
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 1.2;
+
+  // Stop auto-rotate when user interacts, restart after 3s idle
+  let idleTimer = null;
+  const stopAutoRotate = () => {
+    controls.autoRotate = false;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { controls.autoRotate = true; }, 3000);
+  };
+  canvas.addEventListener("pointerdown", stopAutoRotate);
+  canvas.addEventListener("wheel", stopAutoRotate);
+
+  // Animation loop
+  let af;
   const anim = () => {
     af = requestAnimationFrame(anim);
-    tr = Math.sin(Date.now() * 0.0002) * 0.4 + mx * 0.6;
-    cr += (tr - cr) * 0.02;
-    carGroup.rotation.y = cr;
+    controls.update();
     renderer.render(scene, cam);
   };
   anim();
+
   const onR = () => { const nw = canvas.clientWidth, nh = canvas.clientHeight; cam.aspect = nw / nh; cam.updateProjectionMatrix(); renderer.setSize(nw, nh); };
   window.addEventListener("resize", onR);
 
   return {
-    cleanup: () => { cancelAnimationFrame(af); canvas.removeEventListener("mousemove", onM); window.removeEventListener("resize", onR); renderer.dispose(); },
+    cleanup: () => {
+      cancelAnimationFrame(af);
+      canvas.removeEventListener("pointerdown", stopAutoRotate);
+      canvas.removeEventListener("wheel", stopAutoRotate);
+      window.removeEventListener("resize", onR);
+      clearTimeout(idleTimer);
+      controls.dispose();
+      renderer.dispose();
+    },
     setBodyColor,
     resetBodyColor,
   };
