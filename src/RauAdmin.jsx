@@ -13,16 +13,18 @@ import { supabase } from "./supabase";
    DESIGN TOKENS
    ═══════════════════════════════════════════ */
 const C = {
-  bg: "#080808", panel: "#141414", panelHover: "#1c1c1c", panelBorder: "#2a2a2a",
-  surface: "#1e1e1e", surfaceHover: "#262626", surfaceActive: "#303030",
-  gold: "#D4A84B", goldBright: "#E8C068", goldDim: "rgba(212,168,75,0.4)",
-  goldSubtle: "rgba(212,168,75,0.08)", goldSubtle2: "rgba(212,168,75,0.15)",
-  white: "#F0EDE6", text: "#C8C4BB", textMuted: "#8A8680", textDark: "#5A5752",
-  red: "#E8524A", redDim: "rgba(232,82,74,0.12)", redBg: "rgba(232,82,74,0.08)",
-  green: "#5ABF6E", greenDim: "rgba(90,191,110,0.12)", greenBg: "rgba(90,191,110,0.08)",
-  blue: "#5B9FD4", blueDim: "rgba(91,159,212,0.12)", blueBg: "rgba(91,159,212,0.08)",
-  orange: "#D4885B", orangeDim: "rgba(212,136,91,0.12)",
-  purple: "#9B7FD4", purpleDim: "rgba(155,127,212,0.12)",
+  bg: "#0a0a0a", panel: "#111111", panelHover: "#181818", panelBorder: "#1e1e1e",
+  surface: "#161616", surfaceHover: "#1c1c1c", surfaceActive: "#242424",
+  accent: "#8a9a6e", accentBright: "#a0b27e", accentDim: "rgba(138,154,110,0.35)",
+  accentSubtle: "rgba(138,154,110,0.08)", accentSubtle2: "rgba(138,154,110,0.15)",
+  gold: "#8a9a6e", goldBright: "#a0b27e", goldDim: "rgba(138,154,110,0.35)",
+  goldSubtle: "rgba(138,154,110,0.08)", goldSubtle2: "rgba(138,154,110,0.15)",
+  white: "#e8e8e4", text: "#b0b0a8", textMuted: "#6a6a64", textDark: "#3e3e3a",
+  red: "#c45050", redDim: "rgba(196,80,80,0.12)", redBg: "rgba(196,80,80,0.06)",
+  green: "#7a9e6a", greenDim: "rgba(122,158,106,0.12)", greenBg: "rgba(122,158,106,0.06)",
+  blue: "#6a8eaa", blueDim: "rgba(106,142,170,0.12)", blueBg: "rgba(106,142,170,0.06)",
+  orange: "#b08a5a", orangeDim: "rgba(176,138,90,0.12)",
+  purple: "#8a7aaa", purpleDim: "rgba(138,122,170,0.12)",
 };
 const mono = "'JetBrains Mono', monospace";
 const sans = "'Outfit', sans-serif";
@@ -426,7 +428,7 @@ const StatusBadge = ({ status }) => {
     available: { bg: C.greenBg, border: C.green + "40", color: C.green, label: "Beschikbaar" },
   };
   const s = map[status] || { bg: C.surface, border: C.panelBorder, color: C.textMuted, label: status };
-  return <span style={{ fontSize: 10, fontFamily: mono, padding: "3px 10px", background: s.bg, border: `1px solid ${s.border}`, color: s.color, borderRadius: 2, letterSpacing: "0.06em", fontWeight: 500 }}>{s.label}</span>;
+  return <span style={{ fontSize: 9, fontFamily: mono, padding: "4px 12px", background: s.bg, border: `1px solid ${s.border}`, color: s.color, borderRadius: 20, letterSpacing: "0.08em", fontWeight: 500, textTransform: "uppercase" }}>{s.label}</span>;
 };
 
 const TierBadge = ({ tier }) => {
@@ -886,7 +888,7 @@ export default function AdminDashboard() {
   const monthlyRevenue = clients.filter(c => c.status === "active").reduce((s, c) => s + c.monthlyFee, 0);
   const pendingServices = services.filter(s => s.status !== "completed").length;
   const unreadMessages = messages.filter(m => !m.read).length;
-  const sw = isMobile ? 0 : (sideOpen ? 220 : 58);
+  const sw = 0; // Full width — sidebar is overlay-only
 
   const getVehicle = (vid) => allVehicles.find(v => v.id === vid);
   const getClient = (cid) => clients.find(c => c.id === cid);
@@ -926,22 +928,66 @@ export default function AdminDashboard() {
 
         {/* ── Top bar overlay ── */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, padding: isMobile ? "20px 20px" : "28px 36px",
-          display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          {/* Welcome */}
-          <div>
-            <div style={{ fontSize: isMobile ? 22 : 32, color: C.white, fontWeight: 300, letterSpacing: "-0.01em", lineHeight: 1.2 }}>
-              Welkom terug, Anton
+          display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {/* Left: hamburger + logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 16 : 24 }}>
+            {/* Hamburger */}
+            <div onClick={() => setMobileMenuOpen(true)} style={{
+              width: 40, height: 40, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+              transition: "all 0.2s", background: "rgba(255,255,255,0.02)",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+            >
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                <line x1="0" y1="1" x2="16" y2="1" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+                <line x1="0" y1="6" x2="16" y2="6" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+                <line x1="0" y1="11" x2="16" y2="11" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+              </svg>
             </div>
+            {/* Logo */}
+            <span style={{ fontSize: isMobile ? 20 : 26, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.06em" }}>raù</span>
           </div>
-          {/* Value */}
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.25em", color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>WAARDE</div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: dashVehicle?.change >= 0 ? "#4ADE80" : "#E8524A" }} />
-              <span style={{ fontSize: isMobile ? 20 : 28, color: C.white, fontWeight: 300, fontFamily: mono, letterSpacing: "-0.02em" }}>
-                € {dashVehicle?.value ? dashVehicle.value.toLocaleString("nl-BE") : "0"}
-              </span>
-            </div>
+
+          {/* Right: icons */}
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
+            {[
+              { icon: "☾", label: "Dark mode" },
+              { icon: "✉", label: "Berichten", notif: unreadMessages > 0 },
+              { icon: "○", label: "Profiel", isProfile: true },
+            ].map((btn, i) => (
+              <div key={i} onClick={() => { if (btn.label === "Berichten") setNav("messages"); if (btn.isProfile) setMobileMenuOpen(true); }} style={{
+                width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)",
+                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                transition: "all 0.2s", position: "relative", fontSize: 15,
+                color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.02)",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
+              >
+                {btn.icon}
+                {btn.notif && <div style={{ position: "absolute", top: 6, right: 6, width: 6, height: 6, borderRadius: "50%", background: C.red }} />}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Welcome text — below top bar */}
+        <div style={{ position: "absolute", top: isMobile ? 80 : 90, left: isMobile ? 20 : 36, zIndex: 10 }}>
+          <div style={{ fontSize: isMobile ? 24 : 36, color: C.white, fontWeight: 300, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
+            Welkom terug, Anton
+          </div>
+        </div>
+
+        {/* Value — top right below icons */}
+        <div style={{ position: "absolute", top: isMobile ? 80 : 90, right: isMobile ? 20 : 36, zIndex: 10, textAlign: "right" }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.25em", color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>WAARDE</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7a9e6a" }} />
+            <span style={{ fontSize: isMobile ? 20 : 28, color: C.white, fontWeight: 300, fontFamily: mono, letterSpacing: "-0.02em" }}>
+              € {dashVehicle?.value ? dashVehicle.value.toLocaleString("nl-BE") : "0"}
+            </span>
           </div>
         </div>
 
@@ -1623,29 +1669,27 @@ export default function AdminDashboard() {
   // ── PIN LOCK SCREEN ──
   if (pinLocked) {
     return (
-      <div style={{ width: "100%", height: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans }}>
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+      <div style={{ width: "100%", height: "100vh", background: "#060606", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans }}>
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet" />
         <div style={{ textAlign: "center", padding: 40 }}>
-          <div style={{ width: 50, height: 50, border: `2px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: mono, fontSize: 18, color: C.gold, fontWeight: 600, margin: "0 auto 24px" }}>R</div>
-          <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: "0.22em", color: C.white, marginBottom: 6 }}>RAÚ</div>
-          <div style={{ fontSize: 9, letterSpacing: "0.35em", color: C.textMuted, marginBottom: 40 }}>ADMIN CONSOLE</div>
+          <div style={{ fontSize: 36, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.06em", marginBottom: 40 }}>raù</div>
 
-          <div style={{ fontSize: 11, letterSpacing: "0.2em", color: C.textMuted, marginBottom: 16 }}>VOER PINCODE IN</div>
+          <div style={{ fontSize: 10, letterSpacing: "0.25em", color: "rgba(255,255,255,0.25)", marginBottom: 20 }}>VOER PINCODE IN</div>
 
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 24 }}>
             {[0, 1, 2, 3].map(i => (
               <div key={i} style={{
-                width: 48, height: 56, borderRadius: 6,
-                border: `2px solid ${pinError ? C.red : (pinInput.length > i ? C.gold : C.panelBorder)}`,
-                background: C.panel, display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 24, color: C.gold, fontFamily: mono, transition: "all 0.2s",
+                width: 44, height: 52, borderRadius: 8,
+                border: `1.5px solid ${pinError ? "rgba(196,80,80,0.6)" : (pinInput.length > i ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.08)")}`,
+                background: "rgba(255,255,255,0.02)", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 22, color: C.white, fontFamily: mono, transition: "all 0.2s",
               }}>
                 {pinInput.length > i ? "•" : ""}
               </div>
             ))}
           </div>
 
-          {pinError && <div style={{ fontSize: 12, color: C.red, marginBottom: 16 }}>Onjuiste pincode</div>}
+          {pinError && <div style={{ fontSize: 11, color: C.red, marginBottom: 16 }}>Onjuiste pincode</div>}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 64px)", gap: 8, justifyContent: "center", marginBottom: 16 }}>
             {[1,2,3,4,5,6,7,8,9,null,0,"←"].map((n, i) => {
@@ -1669,14 +1713,14 @@ export default function AdminDashboard() {
                     }, 200);
                   }
                 }} style={{
-                  width: 64, height: 56, borderRadius: 8,
-                  background: C.panel, border: `1px solid ${C.panelBorder}`,
+                  width: 60, height: 52, borderRadius: 10,
+                  background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: n === "←" ? 20 : 22, color: C.text, fontFamily: mono,
+                  fontSize: n === "←" ? 18 : 20, color: "rgba(255,255,255,0.6)", fontFamily: mono,
                   cursor: "pointer", transition: "all 0.15s", userSelect: "none",
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.background = C.surfaceHover; e.currentTarget.style.borderColor = C.goldDim; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = C.panel; e.currentTarget.style.borderColor = C.panelBorder; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}
                 >{n}</div>
               );
             })}
@@ -1688,106 +1732,102 @@ export default function AdminDashboard() {
 
   // ── MAIN APP ──
   return (
-    <div style={{ width: "100%", height: "100vh", background: C.bg, color: C.white, fontFamily: sans, overflow: "hidden", position: "relative", letterSpacing: "0.03em" }}>
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+    <div style={{ width: "100%", height: "100vh", background: C.bg, color: C.white, fontFamily: sans, overflow: "hidden", position: "relative", letterSpacing: "0.02em" }}>
+      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.goldDim};border-radius:2px}
-        *{scrollbar-width:thin;scrollbar-color:${C.goldDim} transparent;box-sizing:border-box}
+        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+        *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.08) transparent;box-sizing:border-box}
         input::placeholder{color:${C.textDark}}
         textarea::placeholder{color:${C.textDark}}
         textarea{resize:vertical}
         select{appearance:auto}
       `}</style>
 
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,0.4) 100%)" }} />
-
-      {/* Mobile header */}
-      {isMobile && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, height: 52, zIndex: 110,
-          background: C.panel, borderBottom: `1px solid ${C.panelBorder}`,
-          display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px",
-        }}>
-          <div onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ cursor: "pointer", padding: 8, fontSize: 20, color: C.textMuted }}>☰</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 24, height: 24, border: `1.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: mono, fontSize: 10, color: C.gold, fontWeight: 600 }}>R</div>
-            <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.2em", color: C.white }}>RAÚ</span>
-          </div>
-          <div style={{ width: 36 }} />
-        </div>
+      {/* Overlay when menu open */}
+      {mobileMenuOpen && (
+        <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 115, backdropFilter: "blur(4px)" }} />
       )}
 
-      {/* Mobile overlay */}
-      {isMobile && mobileMenuOpen && (
-        <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 115 }} />
-      )}
-
-      {/* Sidebar — desktop: fixed, mobile: slide-over */}
+      {/* Slide-over menu — all screen sizes */}
       <nav style={{
-        position: "fixed", top: isMobile ? 0 : 0, left: 0, bottom: 0,
-        width: isMobile ? 260 : (sideOpen ? 220 : 58),
-        zIndex: isMobile ? 120 : 100,
-        background: C.panel, borderRight: `1px solid ${C.panelBorder}`,
-        transition: isMobile ? "transform 0.3s ease" : "width 0.35s cubic-bezier(0.4,0,0.2,1)",
-        transform: isMobile ? (mobileMenuOpen ? "translateX(0)" : "translateX(-100%)") : "none",
+        position: "fixed", top: 0, left: 0, bottom: 0, width: 280, zIndex: 120,
+        background: "rgba(14,14,14,0.97)", borderRight: "1px solid rgba(255,255,255,0.05)",
+        backdropFilter: "blur(20px)",
+        transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
+        transform: mobileMenuOpen ? "translateX(0)" : "translateX(-100%)",
         display: "flex", flexDirection: "column",
-        opacity: loaded ? 1 : 0,
       }}>
-        <div onClick={() => isMobile ? setMobileMenuOpen(false) : setSideOpen(!sideOpen)} style={{
-          padding: (isMobile || sideOpen) ? "22px 20px" : "22px 14px",
-          borderBottom: `1px solid ${C.panelBorder}`,
-          display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "padding 0.35s",
-        }}>
-          <div style={{ width: 30, height: 30, border: `1.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: mono, fontSize: 13, color: C.gold, fontWeight: 600, flexShrink: 0 }}>R</div>
-          {(isMobile || sideOpen) && <div>
-            <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: "0.22em", color: C.white }}>RAÚ</div>
-            <div style={{ fontSize: 7, letterSpacing: "0.35em", color: C.textMuted }}>ADMIN CONSOLE</div>
-          </div>}
+        {/* Menu header */}
+        <div style={{ padding: "28px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 22, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.05em" }}>raù</span>
+          <div onClick={() => setMobileMenuOpen(false)} style={{ cursor: "pointer", color: C.textMuted, fontSize: 18, padding: 4 }}>✕</div>
         </div>
 
-        <div style={{ flex: 1, padding: "10px 0", display: "flex", flexDirection: "column", gap: 1, overflowY: "auto" }}>
+        {/* Nav items */}
+        <div style={{ flex: 1, padding: "16px 0", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
           {navItems.map(it => {
             const a = nav === it.id;
             const hasNotif = it.id === "messages" && unreadMessages > 0;
             return (
-              <div key={it.id} onClick={() => { setNav(it.id); setSearch(""); if (isMobile) setMobileMenuOpen(false); }} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: (isMobile || sideOpen) ? "10px 20px" : "10px 18px",
-                color: a ? C.gold : C.textMuted, fontSize: 13, fontWeight: a ? 500 : 300,
-                cursor: "pointer", transition: "all 0.25s",
-                background: a ? C.goldSubtle : "transparent",
-                borderLeft: a ? `2px solid ${C.gold}` : "2px solid transparent",
+              <div key={it.id} onClick={() => { setNav(it.id); setSearch(""); setMobileMenuOpen(false); }} style={{
+                display: "flex", alignItems: "center", gap: 14, padding: "13px 24px",
+                color: a ? C.white : C.textMuted, fontSize: 14, fontWeight: a ? 400 : 300,
+                cursor: "pointer", transition: "all 0.2s",
+                background: a ? "rgba(255,255,255,0.04)" : "transparent",
+                borderLeft: a ? `2px solid ${C.accent}` : "2px solid transparent",
               }}
-                onMouseEnter={e => { if (!a) e.currentTarget.style.background = C.surfaceHover; }}
-                onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? C.goldSubtle : "transparent"; }}>
-                <span style={{ fontSize: 15, width: 20, textAlign: "center", flexShrink: 0 }}>{it.icon}</span>
-                {(isMobile || sideOpen) && <span style={{ letterSpacing: "0.12em", flex: 1 }}>{it.label}</span>}
-                {(isMobile || sideOpen) && hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "1px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
+                onMouseEnter={e => { if (!a) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+                onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? "rgba(255,255,255,0.04)" : "transparent"; }}>
+                <span style={{ fontSize: 15, width: 22, textAlign: "center", flexShrink: 0, opacity: 0.5 }}>{it.icon}</span>
+                <span style={{ letterSpacing: "0.08em", flex: 1 }}>{it.label}</span>
+                {hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "2px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
               </div>
             );
           })}
         </div>
 
-        <div style={{ padding: (isMobile || sideOpen) ? "14px 20px" : "14px 14px", borderTop: `1px solid ${C.panelBorder}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.goldSubtle, border: `1px solid ${C.goldDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.gold, fontWeight: 600, fontFamily: mono }}>AS</div>
-            {(isMobile || sideOpen) && <div>
-              <div style={{ fontSize: 11, color: C.text }}>Anton S.</div>
-              <div style={{ fontSize: 9, color: C.textDark }}>Beheerder</div>
-            </div>}
+        {/* User */}
+        <div style={{ padding: "18px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono }}>AS</div>
+            <div>
+              <div style={{ fontSize: 12, color: C.text }}>Anton Steegmans</div>
+              <div style={{ fontSize: 10, color: C.textDark }}>Beheerder</div>
+            </div>
           </div>
         </div>
       </nav>
 
-      {/* Main */}
-      <main style={{
-        marginLeft: sw, height: "100vh",
-        paddingTop: isMobile ? 52 : 0,
-        transition: "margin-left 0.35s cubic-bezier(0.4,0,0.2,1)",
-        display: "flex", flexDirection: "column",
-      }}>
+      {/* Main — full width */}
+      <main style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column" }}>
+        {/* Header bar for non-dashboard pages */}
+        {nav !== "dashboard" && (
+          <div style={{
+            height: 56, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "0 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: C.bg,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div onClick={() => setMobileMenuOpen(true)} style={{
+                width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)",
+                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s",
+              }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+              >
+                <svg width="14" height="10" viewBox="0 0 16 12" fill="none">
+                  <line x1="0" y1="1" x2="16" y2="1" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
+                  <line x1="0" y1="6" x2="16" y2="6" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
+                  <line x1="0" y1="11" x2="16" y2="11" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: 18, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white }}>raù</span>
+              <span style={{ fontSize: 10, letterSpacing: "0.25em", color: C.textMuted, marginLeft: 8 }}>
+                {navItems.find(n => n.id === nav)?.label.toUpperCase()}
+              </span>
+            </div>
+          </div>
+        )}
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{sections[nav]?.()}</div>
       </main>
 
