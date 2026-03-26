@@ -143,9 +143,9 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  // Scene — light grey studio
+  // Scene — dark moody studio
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xd4d4d4);
+  scene.background = new THREE.Color(0x0a0a0a);
 
   // Camera
   const cam = new THREE.PerspectiveCamera(32, w / h, 0.1, 200);
@@ -155,7 +155,7 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   // Floor
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(100, 100),
-    new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.6, metalness: 0.0 })
+    new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3, metalness: 0.8 })
   );
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = 0;
@@ -183,9 +183,9 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   contactShadow.position.set(0, 0.01, 0);
   scene.add(contactShadow);
 
-  // Lighting
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
+  // Lighting — dark moody studio
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
   sunLight.position.set(4, 10, 4);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
@@ -197,13 +197,13 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   sunLight.shadow.camera.far = 25;
   sunLight.shadow.bias = -0.001;
   scene.add(sunLight);
-  const keyLight = new THREE.SpotLight(0xffffff, 3.0, 30, Math.PI / 4, 0.6);
+  const keyLight = new THREE.SpotLight(0xffffff, 4.0, 30, Math.PI / 4, 0.6);
   keyLight.position.set(6, 6, 5); keyLight.lookAt(0, 0, 0); scene.add(keyLight);
-  const fillLight = new THREE.SpotLight(0xeeeeff, 2.0, 30, Math.PI / 3, 0.7);
+  const fillLight = new THREE.SpotLight(0xeeeeff, 1.2, 30, Math.PI / 3, 0.7);
   fillLight.position.set(-7, 5, 2); fillLight.lookAt(0, 0, 0); scene.add(fillLight);
-  const rimLight = new THREE.SpotLight(0xffffff, 2.5, 25, Math.PI / 5, 0.5);
+  const rimLight = new THREE.SpotLight(0xffffff, 3.5, 25, Math.PI / 5, 0.5);
   rimLight.position.set(-2, 4, -7); rimLight.lookAt(0, 0.5, 0); scene.add(rimLight);
-  const topLight = new THREE.PointLight(0xffffff, 1.5, 25);
+  const topLight = new THREE.PointLight(0xffffff, 1.0, 25);
   topLight.position.set(0, 12, 0); scene.add(topLight);
 
   // Track body materials for color changes
@@ -893,219 +893,204 @@ export default function AdminDashboard() {
 
   /* ═══ DASHBOARD ═══ */
   const dashVehicle = allVehicles[dashCarIdx % allVehicles.length];
+  const dashLinkedModel = dashVehicle ? getLinkedModel(dashVehicle.id) : null;
+  const dashBrand = dashLinkedModel ? getLinkedBrand(dashLinkedModel) : null;
+  const dashDisplayName = dashLinkedModel ? `${dashBrand?.name || ""} ${dashLinkedModel.name}` : `${dashVehicle?.make || ""} ${dashVehicle?.name || ""}`;
+
   const renderDashboard = () => (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* ─── 3D HERO ─── */}
-      <div style={{ flex: isMobile ? "0 0 250px" : "1 1 50%", position: "relative", minHeight: isMobile ? 250 : 320 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#0a0a0a" }}>
+      {/* ─── 3D HERO — full-bleed ─── */}
+      <div style={{ flex: "1 1 68%", position: "relative", minHeight: isMobile ? 280 : 400 }}>
         <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
+
+        {/* Vignette overlay */}
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3,
+          background: "radial-gradient(ellipse at 60% 50%, transparent 30%, rgba(0,0,0,0.6) 100%)" }} />
+        {/* Bottom fade */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 200,
+          background: "linear-gradient(transparent, rgba(10,10,10,0.95))", pointerEvents: "none", zIndex: 4 }} />
+        {/* Top fade */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 100,
+          background: "linear-gradient(rgba(10,10,10,0.5), transparent)", pointerEvents: "none", zIndex: 4 }} />
 
         {/* No 3D model placeholder */}
         {no3DModel && (
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 8, display: "flex", alignItems: "center", justifyContent: "center",
-            flexDirection: "column", gap: 12, pointerEvents: "none",
-          }}>
-            <div style={{ fontSize: 48, opacity: 0.15 }}>⬡</div>
-            <div style={{ fontSize: 14, color: C.textMuted, letterSpacing: "0.15em" }}>GEEN 3D MODEL</div>
-            <div style={{ fontSize: 11, color: C.textDark, textAlign: "center", maxWidth: 300, lineHeight: 1.6 }}>
-              Koppel dit voertuig aan een model in de Fleet-pagina, of upload een 3D bestand in Instellingen.
+          <div style={{ position: "absolute", inset: 0, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, pointerEvents: "none" }}>
+            <div style={{ fontSize: 48, opacity: 0.1, color: C.white }}>⬡</div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.25)", letterSpacing: "0.2em" }}>GEEN 3D MODEL</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", textAlign: "center", maxWidth: 300 }}>
+              Koppel dit voertuig aan een model via Fleet
             </div>
           </div>
         )}
 
-        {/* Top-left: greeting */}
-        <div style={{ position: "absolute", top: isMobile ? 12 : 24, left: isMobile ? 16 : 28, zIndex: 10 }}>
-          <div style={{ fontSize: isMobile ? 16 : 20, color: C.white, fontWeight: 300 }}>Goedemorgen, Anton</div>
-          {!isMobile && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>Dinsdag 25 maart 2026 — {allVehicles.length} wagens in beheer</div>}
-        </div>
-
-        {/* Top-right: action */}
-        {!isMobile && (
-        <div style={{ position: "absolute", top: 24, right: 28, zIndex: 10 }}>
-          <Btn primary onClick={() => setNewServiceOpen(true)}>+ NIEUWE SERVICE</Btn>
-        </div>
-        )}
-
-        {/* Center vehicle info */}
-        <div style={{ position: "absolute", bottom: isMobile ? 60 : 80, left: isMobile ? 16 : 28, zIndex: 10 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.4em", color: C.textMuted, marginBottom: 6 }}>IN FOCUS</div>
-          <div style={{ fontSize: isMobile ? 18 : 28, fontWeight: 200, letterSpacing: "0.06em", color: C.white }}>{dashVehicle?.make} {dashVehicle?.name}</div>
-          <div style={{ fontSize: isMobile ? 10 : 12, color: C.gold, letterSpacing: "0.15em", marginTop: 4 }}>
-            {dashVehicle?.plate} · {dashVehicle?.color} · {dashVehicle?.mileage}
-          </div>
-          {!isMobile && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>Eigenaar: {dashVehicle?.clientName}</div>}
-          {dashVehicle && getLinkedModel(dashVehicle.id) && (
-            <div style={{ fontSize: 10, color: C.gold, fontFamily: mono, marginTop: 4, opacity: 0.7 }}>
-              {getLinkedBrand(getLinkedModel(dashVehicle.id))?.name} {getLinkedModel(dashVehicle.id)?.name}
+        {/* ── Top bar overlay ── */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, padding: isMobile ? "20px 20px" : "28px 36px",
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          {/* Welcome */}
+          <div>
+            <div style={{ fontSize: isMobile ? 22 : 32, color: C.white, fontWeight: 300, letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+              Welkom terug, Anton
             </div>
-          )}
+          </div>
+          {/* Value */}
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.25em", color: "rgba(255,255,255,0.4)", fontWeight: 400 }}>WAARDE</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: dashVehicle?.change >= 0 ? "#4ADE80" : "#E8524A" }} />
+              <span style={{ fontSize: isMobile ? 20 : 28, color: C.white, fontWeight: 300, fontFamily: mono, letterSpacing: "-0.02em" }}>
+                € {dashVehicle?.value ? dashVehicle.value.toLocaleString("nl-BE") : "0"}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Center-right value + status */}
-        {!isMobile && (
-        <div style={{ position: "absolute", bottom: 80, right: 28, zIndex: 10, textAlign: "right" }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.3em", color: C.textMuted }}>WAARDE</div>
-          <div style={{ fontSize: 30, fontWeight: 300, color: C.goldBright, fontFamily: mono, marginTop: 4 }}>{fmtEuro(dashVehicle?.value || 0)}</div>
-          <div style={{ marginTop: 8 }}><StatusBadge status={dashVehicle?.status || "garaged"} /></div>
-        </div>
-        )}
-
-        {/* Vehicle selector */}
-        <div style={{ position: "absolute", bottom: isMobile ? 8 : 20, left: isMobile ? 8 : 28, right: isMobile ? 8 : 28, zIndex: 10, display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
-          {allVehicles.map((v, i) => {
-            const sel = i === dashCarIdx % allVehicles.length;
-            return (
-              <div key={v.id} onClick={() => setDashCarIdx(i)} style={{
-                padding: isMobile ? "6px 10px" : "8px 16px", flexShrink: 0,
-                background: sel ? C.surface : "rgba(8,8,8,0.8)",
-                border: `1px solid ${sel ? C.gold : C.panelBorder}`,
-                borderRadius: 3, cursor: "pointer", transition: "all 0.3s",
-                backdropFilter: "blur(12px)",
-              }}
-                onMouseEnter={e => { if (!sel) e.currentTarget.style.borderColor = C.goldDim; }}
-                onMouseLeave={e => { if (!sel) e.currentTarget.style.borderColor = C.panelBorder; }}
-              >
-                <div style={{ fontSize: 10, color: sel ? C.gold : C.text, fontWeight: 500, letterSpacing: "0.08em" }}>{v.make}</div>
-                <div style={{ fontSize: 9, color: C.textMuted, fontFamily: mono, marginTop: 1 }}>{v.name}</div>
+        {/* ── Bottom overlay — car info ── */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10, padding: isMobile ? "0 20px 16px" : "0 36px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            {/* Left: car name */}
+            <div>
+              <div style={{ fontSize: 10, letterSpacing: "0.35em", color: "rgba(255,255,255,0.35)", fontWeight: 400, marginBottom: 6 }}>IN FOCUS</div>
+              <div style={{ fontSize: isMobile ? 22 : 34, color: C.white, fontWeight: 300, letterSpacing: "-0.01em", lineHeight: 1.1 }}>
+                {dashDisplayName.trim() || "Selecteer een voertuig"}
               </div>
-            );
-          })}
-        </div>
+              <div style={{ marginTop: 10 }}><StatusBadge status={dashVehicle?.status || "garaged"} /></div>
+            </div>
 
-        {/* Color swatches — only show when 3D model is loaded */}
-        {!no3DModel && (
-          <div style={{
-            position: "absolute", top: isMobile ? "auto" : 24, bottom: isMobile ? 60 : "auto",
-            right: isMobile ? 16 : 28, zIndex: 12,
-            display: "flex", flexDirection: isMobile ? "row" : "column", gap: 6, alignItems: "center",
-          }}>
-            <div style={{ fontSize: 8, letterSpacing: "0.2em", color: C.textMuted, marginBottom: isMobile ? 0 : 4, writingMode: isMobile ? "initial" : "initial" }}>KLEUR</div>
-            {[
-              { name: "Rosso Corsa", hex: "#cc2020" },
-              { name: "Nero", hex: "#1a1a1a" },
-              { name: "Bianco Avus", hex: "#e8e6e0" },
-              { name: "Grigio Silverstone", hex: "#8a8a8a" },
-              { name: "Blu Pozzi", hex: "#1e3a6a" },
-              { name: "Verde British", hex: "#1a4a2a" },
-              { name: "Giallo Modena", hex: "#e8c820" },
-              { name: "Arancio Dino", hex: "#d4682a" },
-            ].map(c => (
-              <div key={c.hex} onClick={() => changeBodyColor(c.hex)} title={c.name} style={{
-                width: 26, height: 26, borderRadius: "50%", cursor: "pointer",
-                background: c.hex,
-                border: `2px solid ${selectedBodyColor === c.hex ? C.gold : "rgba(255,255,255,0.15)"}`,
-                boxShadow: selectedBodyColor === c.hex ? `0 0 10px ${C.gold}80` : "0 2px 6px rgba(0,0,0,0.3)",
-                transition: "all 0.2s",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.2)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
-              />
-            ))}
-            {selectedBodyColor && (
-              <div onClick={resetColor} style={{
-                width: 26, height: 26, borderRadius: "50%", cursor: "pointer",
-                background: C.surface, border: `1px solid ${C.panelBorder}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 12, color: C.textMuted, transition: "all 0.2s",
-              }} title="Reset naar origineel"
-                onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = C.panelBorder; }}
-              >↺</div>
-            )}
+            {/* Right: color swatches + nav */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {/* Color swatches */}
+              {!no3DModel && (
+                <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                  {[
+                    { name: "Rosso", hex: "#cc2020" },
+                    { name: "Nero", hex: "#1a1a1a" },
+                    { name: "Bianco", hex: "#e8e6e0" },
+                    { name: "Grigio", hex: "#8a8a8a" },
+                    { name: "Blu", hex: "#1e3a6a" },
+                    { name: "Verde", hex: "#1a4a2a" },
+                    { name: "Giallo", hex: "#e8c820" },
+                    { name: "Arancio", hex: "#d4682a" },
+                  ].map(c => (
+                    <div key={c.hex} onClick={() => changeBodyColor(c.hex)} title={c.name} style={{
+                      width: 22, height: 22, borderRadius: "50%", cursor: "pointer", background: c.hex,
+                      border: `2px solid ${selectedBodyColor === c.hex ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.12)"}`,
+                      transition: "all 0.2s",
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.transform = "scale(1.25)"}
+                      onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                    />
+                  ))}
+                  {selectedBodyColor && (
+                    <div onClick={resetColor} title="Reset" style={{
+                      width: 22, height: 22, borderRadius: "50%", cursor: "pointer",
+                      background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
+                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "rgba(255,255,255,0.4)",
+                    }}>↺</div>
+                  )}
+                </div>
+              )}
+
+              {/* Vehicle prev/next */}
+              {allVehicles.length > 1 && (
+                <div style={{ display: "flex", gap: 6 }}>
+                  <div onClick={() => setDashCarIdx(i => (i - 1 + allVehicles.length) % allVehicles.length)} style={{
+                    width: 36, height: 36, borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)",
+                    display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                    color: "rgba(255,255,255,0.4)", fontSize: 16, transition: "all 0.2s", background: "rgba(255,255,255,0.03)",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+                  >‹</div>
+                  <div onClick={() => setDashCarIdx(i => (i + 1) % allVehicles.length)} style={{
+                    width: 36, height: 36, borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)",
+                    display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                    color: "rgba(255,255,255,0.4)", fontSize: 16, transition: "all 0.2s", background: "rgba(255,255,255,0.03)",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+                  >›</div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-
-        {/* Bottom gradient */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 100, background: `linear-gradient(transparent, ${C.bg})`, pointerEvents: "none", zIndex: 5 }} />
+        </div>
       </div>
 
-      {/* ─── GOLD DIVIDER ─── */}
-      <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${C.gold}, transparent)`, opacity: 0.5, flexShrink: 0 }} />
+      {/* ─── BOTTOM INFO CARDS ─── */}
+      <div style={{ flex: "0 0 auto", padding: isMobile ? "16px 16px 20px" : "20px 36px 28px", background: "#0a0a0a" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 12 : 16 }}>
 
-      {/* ─── BOTTOM PANELS ─── */}
-      <div style={{ flex: "0 0 auto", overflowY: "auto", padding: isMobile ? 12 : 20 }}>
-        {/* KPIs */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
-          {[
-            { label: "ACTIEVE KLANTEN", value: activeClients, sub: `${clients.length} totaal`, color: C.green, icon: "◇" },
-            { label: "WAGENS IN BEHEER", value: allVehicles.length, sub: `${allVehicles.filter(v => v.status === "in-service").length} in service`, color: C.blue, icon: "⬡" },
-            { label: "MAANDOMZET", value: fmtEuro(monthlyRevenue), sub: "+12% vs vorige maand", color: C.gold, icon: "□" },
-            { label: "OPEN SERVICES", value: pendingServices, sub: `${services.filter(s => s.status === "in-progress").length} in uitvoering`, color: C.orange, icon: "○" },
-          ].map((kpi, i) => (
-            <Panel key={i} style={{ padding: "16px 18px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.25em", color: C.textMuted }}>{kpi.label}</div>
-                <span style={{ fontSize: 14, color: kpi.color, opacity: 0.4 }}>{kpi.icon}</span>
-              </div>
-              <div style={{ fontSize: 26, color: kpi.color, fontFamily: mono, fontWeight: 400, marginTop: 8 }}>{kpi.value}</div>
-              <div style={{ fontSize: 10, color: C.textDark, marginTop: 4 }}>{kpi.sub}</div>
-            </Panel>
-          ))}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr 1fr", gap: 12 }}>
-          {/* Revenue chart */}
-          <Panel style={{ padding: "18px 20px" }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.25em", color: C.text, fontWeight: 500, marginBottom: 14 }}>OMZET 6 MAANDEN</div>
-            <div style={{ height: 160 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData} margin={{ top: 5, right: 5, bottom: 0, left: -15 }}>
-                  <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.gold} stopOpacity={0.25} /><stop offset="100%" stopColor={C.gold} stopOpacity={0.02} /></linearGradient></defs>
-                  <XAxis dataKey="m" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: C.textMuted, fontFamily: mono }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: C.textMuted, fontFamily: mono }} tickFormatter={v => `€${(v / 1000).toFixed(0)}K`} />
-                  <Tooltip content={<ChartTip />} />
-                  <Area type="monotone" dataKey="rev" stroke={C.gold} strokeWidth={2} fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: C.gold, stroke: C.bg, strokeWidth: 2 }} />
-                </AreaChart>
-              </ResponsiveContainer>
+          {/* INFO card */}
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+            borderRadius: 10, padding: isMobile ? "18px 20px" : "22px 26px",
+          }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>INFO</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+              <span style={{ fontSize: 15, color: C.white, fontFamily: mono, fontWeight: 400 }}>{dashVehicle?.plate || "—"}</span>
+              <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", fontFamily: mono }}>{dashVehicle?.mileage || "0 km"}</span>
             </div>
-          </Panel>
+            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 14 }} />
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 14 }}>{dashVehicle?.color || "—"}</div>
+            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 14 }} />
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4 }}>Eigenaar</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{dashVehicle?.clientName || "—"}</div>
+            </div>
+          </div>
 
-          {/* Today's schedule */}
-          <Panel style={{ padding: "18px 20px" }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.25em", color: C.text, fontWeight: 500, marginBottom: 14 }}>VANDAAG</div>
-            {services.filter(s => s.date === "2026-03-25" || s.status === "in-progress").slice(0, 3).map(s => {
-              const v = getVehicle(s.vehicleId);
+          {/* VANDAAG card */}
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+            borderRadius: 10, padding: isMobile ? "18px 20px" : "22px 26px",
+          }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>VANDAAG</div>
+            {services.filter(s => s.status === "in-progress" || s.status === "scheduled").slice(0, 2).map(s => {
+              const sv = getVehicle(s.vehicleId);
               return (
-                <Hov key={s.id} onClick={() => setSelectedService(s)} style={{ padding: "10px 12px", marginBottom: 4, borderBottom: `1px solid ${C.panelBorder}15` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                    <span style={{ fontSize: 12, color: C.text }}>{s.type}</span>
+                <Hov key={s.id} onClick={() => setSelectedService(s)} style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <span style={{ fontSize: 14, color: C.white, fontWeight: 400 }}>{s.type}</span>
                     <StatusBadge status={s.status} />
                   </div>
-                  <div style={{ fontSize: 11, color: C.textMuted }}>{v?.make} {v?.name}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                    <PriorityDot p={s.priority} />
-                    <span style={{ fontSize: 9, color: C.textDark, fontFamily: mono }}>{s.tech}</span>
-                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{sv?.make} {sv?.name}</div>
                 </Hov>
               );
             })}
-          </Panel>
+            {services.filter(s => s.status === "in-progress" || s.status === "scheduled").length === 0 && (
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", padding: "12px 0" }}>Geen geplande services</div>
+            )}
+            <div onClick={() => setNewServiceOpen(true)} style={{
+              marginTop: 10, padding: "10px 16px", border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 6, fontSize: 11, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em",
+              cursor: "pointer", textAlign: "center", transition: "all 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = C.white; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
+            >+ AFSPRAAK PLANNEN</div>
+          </div>
 
-          {/* Alerts column */}
-          <Panel style={{ padding: "18px 20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.25em", color: C.text, fontWeight: 500 }}>ALERTS</div>
-              {unreadMessages > 0 && <span style={{ fontSize: 10, fontFamily: mono, padding: "2px 8px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
-            </div>
-            {messages.filter(m => !m.read).map(m => (
-              <Hov key={m.id} onClick={() => setNav("messages")} style={{ padding: "8px 10px", marginBottom: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: C.text, fontWeight: 500 }}>{m.subject}</span>
+          {/* PLANNING card */}
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+            borderRadius: 10, padding: isMobile ? "18px 20px" : "22px 26px",
+          }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>PLANNING</div>
+            {[
+              { day: "6", month: "Juni", desc: "Hasselt Élégance — GT Tour" },
+              { day: "14", month: "Augustus", desc: "Vakantie Malediven" },
+              { day: "22", month: "September", desc: "Jaarlijkse inspectie" },
+            ].map((ev, i) => (
+              <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: i < 2 ? 16 : 0 }}>
+                <div style={{ fontSize: 28, color: "rgba(255,255,255,0.15)", fontWeight: 300, fontFamily: mono, lineHeight: 1, minWidth: 36, textAlign: "right" }}>{ev.day}</div>
+                <div>
+                  <div style={{ fontSize: 14, color: C.white, fontWeight: 400 }}>{ev.month}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{ev.desc}</div>
                 </div>
-                <div style={{ fontSize: 10, color: C.textDark, marginTop: 3, marginLeft: 12 }}>{m.clientName} · {m.time}</div>
-              </Hov>
+              </div>
             ))}
-            {invoices.filter(inv => inv.status === "overdue").map(inv => (
-              <Hov key={inv.id} onClick={() => setSelectedInvoice(inv)} style={{ padding: "8px 10px", marginBottom: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.red, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: C.text }}>Achterstallig: {inv.clientName}</span>
-                </div>
-                <div style={{ fontSize: 10, color: C.red, fontFamily: mono, marginTop: 3, marginLeft: 12 }}>€{inv.amount.toLocaleString()}</div>
-              </Hov>
-            ))}
-          </Panel>
+          </div>
         </div>
       </div>
     </div>
