@@ -3,6 +3,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabase";
 
@@ -245,60 +248,92 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   const carGroup = new THREE.Group();
   scene.add(carGroup);
 
-  if (modelUrl) {
-    const gltfLoader = new GLTFLoader();
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-    gltfLoader.setDRACOLoader(dracoLoader);
+  // Process any loaded model (shared logic for all formats)
+  const processModel = (model) => {
+    // Scale
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 8.0 / maxDim;
+    model.scale.setScalar(scale);
 
-    gltfLoader.load(
-      modelUrl,
-      (gltf) => {
-        const model = gltf.scene;
+    // Center
+    const sBox = new THREE.Box3().setFromObject(model);
+    const sCenter = sBox.getCenter(new THREE.Vector3());
+    model.position.x -= sCenter.x;
+    model.position.z -= sCenter.z;
+    model.position.y -= sBox.min.y;
 
-        // Scale
-        const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 8.0 / maxDim;
-        model.scale.setScalar(scale);
+    // Detect body materials + apply initial color
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
 
-        // Center
-        const sBox = new THREE.Box3().setFromObject(model);
-        const sCenter = sBox.getCenter(new THREE.Vector3());
-        model.position.x -= sCenter.x;
-        model.position.z -= sCenter.z;
-        model.position.y -= sBox.min.y;
-
-        // Detect body materials + apply initial color
-        model.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-
-            const mats = Array.isArray(child.material) ? child.material : [child.material];
-            mats.forEach(mat => {
-              if (isBodyMaterial(child, mat)) {
-                // Store original color for reference
-                mat.userData.originalColor = mat.color.clone();
-                bodyMaterials.push(mat);
-              }
-            });
+        // Ensure material has color property (STL meshes may not)
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(mat => {
+          if (mat.color && isBodyMaterial(child, mat)) {
+            mat.userData.originalColor = mat.color.clone();
+            bodyMaterials.push(mat);
           }
         });
+      }
+    });
 
-        // Apply initial color if provided
-        if (initialBodyColor && bodyMaterials.length > 0) {
-          const color = new THREE.Color(initialBodyColor);
-          bodyMaterials.forEach(mat => { mat.color.copy(color); mat.needsUpdate = true; });
-        }
+    // Apply initial color if provided
+    if (initialBodyColor && bodyMaterials.length > 0) {
+      const color = new THREE.Color(initialBodyColor);
+      bodyMaterials.forEach(mat => { mat.color.copy(color); mat.needsUpdate = true; });
+    }
 
-        carGroup.add(model);
-        console.log(`Model loaded! ${bodyMaterials.length} body materials detected.`);
-      },
-      (p) => { if (p.total) console.log(`Loading: ${Math.round(p.loaded / p.total * 100)}%`); },
-      (err) => console.error('GLB error:', err)
-    );
+    carGroup.add(model);
+    console.log(`Model loaded! ${bodyMaterials.length} body materials detected.`);
+  };
+
+  if (modelUrl) {
+    // Detect format from URL
+    const ext = modelUrl.split("?")[0].split(".").pop().toLowerCase();
+    const onProgress = (p) => { if (p.total) console.log(`Loading: ${Math.round(p.loaded / p.total * 100)}%`); };
+    const onError = (err) => console.error(`Error loading .${ext}:`, err);
+
+    if (ext === "glb" || ext === "gltf") {
+      const gltfLoader = new GLTFLoader();
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+      gltfLoader.setDRACOLoader(dracoLoader);
+      gltfLoader.load(modelUrl, (gltf) => processModel(gltf.scene), onProgress, onError);
+
+    } else if (ext === "fbx") {
+      const fbxLoader = new FBXLoader();
+      fbxLoader.load(modelUrl, (fbx) => processModel(fbx), onProgress, onError);
+
+    } else if (ext === "obj") {
+      const objLoader = new OBJLoader();
+      objLoader.load(modelUrl, (obj) => {
+        // OBJ files often have no materials — apply a default metallic one
+        obj.traverse((child) => {
+          if (child.isMesh && (!child.material || child.material.type === "MeshBasicMaterial")) {
+            child.material = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+          }
+        });
+        processModel(obj);
+      }, onProgress, onError);
+
+    } else if (ext === "stl") {
+      const stlLoader = new STLLoader();
+      stlLoader.load(modelUrl, (geometry) => {
+        // STL returns geometry, not a scene — wrap it in a mesh
+        const material = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+        const mesh = new THREE.Mesh(geometry, material);
+        const group = new THREE.Group();
+        group.add(mesh);
+        processModel(group);
+      }, onProgress, onError);
+
+    } else {
+      console.warn(`Onbekend bestandsformaat: .${ext} — probeer GLB/FBX/OBJ/STL`);
+    }
   }
 
   // Color change function — call this from React
@@ -663,20 +698,30 @@ export default function AdminDashboard() {
   const upload3DModel = async (modelId, file) => {
     if (!file) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = file.name.split(".").pop().toLowerCase();
     const filePath = `${modelId}.${ext}`;
 
-    // Remove old file if exists
+    // Content types per format
+    const contentTypes = {
+      glb: "model/gltf-binary", gltf: "model/gltf+json",
+      fbx: "application/octet-stream", obj: "text/plain",
+      stl: "application/octet-stream",
+    };
+
+    // Remove old file if exists (could be a different format)
     const model = dbModels.find(m => m.id === modelId);
     if (model?.model_3d_path) {
       await supabase.storage.from("3d-models").remove([model.model_3d_path]);
     }
 
-    const { error: uploadError } = await supabase.storage.from("3d-models").upload(filePath, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("3d-models").upload(filePath, file, {
+      upsert: true,
+      contentType: contentTypes[ext] || "application/octet-stream",
+    });
     if (uploadError) { flash("Upload fout: " + uploadError.message); setUploading(false); return; }
 
     await supabase.from("models").update({ model_3d_path: filePath }).eq("id", modelId);
-    flash("3D model geüpload!");
+    flash(`3D model geüpload! (.${ext})`);
     setUploading(false);
     loadModels();
   };
@@ -1534,7 +1579,7 @@ export default function AdminDashboard() {
                               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: has3D ? C.green : C.textDark }} />
                                 <span style={{ fontSize: 11, color: has3D ? C.green : C.textMuted, fontWeight: 500 }}>
-                                  {has3D ? "3D MODEL GEÜPLOAD" : "GEEN 3D MODEL"}
+                                  {has3D ? `3D MODEL GEÜPLOAD (.${model.model_3d_path.split(".").pop()})` : "GEEN 3D MODEL"}
                                 </span>
                               </div>
                               {has3D && (
@@ -1552,10 +1597,10 @@ export default function AdminDashboard() {
                               fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", fontFamily: sans,
                               transition: "all 0.2s", opacity: uploading ? 0.5 : 1,
                             }}>
-                              {uploading ? "UPLOADEN..." : has3D ? "3D MODEL VERVANGEN" : "3D MODEL UPLOADEN (.glb)"}
+                              {uploading ? "UPLOADEN..." : has3D ? "3D MODEL VERVANGEN" : "3D MODEL UPLOADEN (.glb .fbx .obj .stl)"}
                               <input
                                 type="file"
-                                accept=".glb,.gltf"
+                                accept=".glb,.gltf,.fbx,.obj,.stl"
                                 style={{ display: "none" }}
                                 disabled={uploading}
                                 onChange={e => {
