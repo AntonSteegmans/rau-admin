@@ -124,11 +124,11 @@ const navItems = [
 ];
 
 /* ═══════════════════════════════════════════
-   3D CAR SCENE — GLB Model Loader
+   3D CAR SCENE — GLB Model Loader + Color Change
    ═══════════════════════════════════════════ */
-function buildCar(canvas, modelUrl) {
+function buildCar(canvas, modelUrl, initialBodyColor) {
   const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (!w || !h) return () => {};
+  if (!w || !h) return { cleanup: () => {}, setBodyColor: () => {} };
 
   // Renderer
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -148,7 +148,7 @@ function buildCar(canvas, modelUrl) {
   cam.position.set(6, 2.2, 6);
   cam.lookAt(0, 0.3, 0);
 
-  // Floor — light grey, receives shadows
+  // Floor
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(100, 100),
     new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.6, metalness: 0.0 })
@@ -158,7 +158,7 @@ function buildCar(canvas, modelUrl) {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  // Contact shadow — soft dark ellipse painted under the car
+  // Contact shadow
   const shadowCanvas = document.createElement('canvas');
   shadowCanvas.width = 512;
   shadowCanvas.height = 512;
@@ -179,12 +179,8 @@ function buildCar(canvas, modelUrl) {
   contactShadow.position.set(0, 0.01, 0);
   scene.add(contactShadow);
 
-  // ── LIGHTING ──
-
-  // Ambient — soft base
+  // Lighting
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-
-  // Main shadow light from above-front
   const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
   sunLight.position.set(4, 10, 4);
   sunLight.castShadow = true;
@@ -197,31 +193,54 @@ function buildCar(canvas, modelUrl) {
   sunLight.shadow.camera.far = 25;
   sunLight.shadow.bias = -0.001;
   scene.add(sunLight);
-
-  // Front-right key
   const keyLight = new THREE.SpotLight(0xffffff, 3.0, 30, Math.PI / 4, 0.6);
-  keyLight.position.set(6, 6, 5);
-  keyLight.lookAt(0, 0, 0);
-  scene.add(keyLight);
-
-  // Left fill
+  keyLight.position.set(6, 6, 5); keyLight.lookAt(0, 0, 0); scene.add(keyLight);
   const fillLight = new THREE.SpotLight(0xeeeeff, 2.0, 30, Math.PI / 3, 0.7);
-  fillLight.position.set(-7, 5, 2);
-  fillLight.lookAt(0, 0, 0);
-  scene.add(fillLight);
-
-  // Back rim
+  fillLight.position.set(-7, 5, 2); fillLight.lookAt(0, 0, 0); scene.add(fillLight);
   const rimLight = new THREE.SpotLight(0xffffff, 2.5, 25, Math.PI / 5, 0.5);
-  rimLight.position.set(-2, 4, -7);
-  rimLight.lookAt(0, 0.5, 0);
-  scene.add(rimLight);
-
-  // Top soft
+  rimLight.position.set(-2, 4, -7); rimLight.lookAt(0, 0.5, 0); scene.add(rimLight);
   const topLight = new THREE.PointLight(0xffffff, 1.5, 25);
-  topLight.position.set(0, 12, 0);
-  scene.add(topLight);
+  topLight.position.set(0, 12, 0); scene.add(topLight);
 
-  // ── LOAD MODEL ──
+  // Track body materials for color changes
+  const bodyMaterials = [];
+
+  // Detect if a material is likely a car body material
+  const isBodyMaterial = (mesh, material) => {
+    const name = (material.name || mesh.name || "").toLowerCase();
+    // Skip known non-body parts
+    const skip = ["glass", "window", "windshield", "tire", "tyre", "rubber", "wheel",
+      "rim", "chrome", "mirror", "light", "lamp", "led", "interior", "seat",
+      "dashboard", "carpet", "fabric", "leather", "grill", "grille", "exhaust",
+      "brake", "caliper", "license", "plate", "emblem", "logo", "badge"];
+    if (skip.some(s => name.includes(s))) return false;
+
+    // Body materials tend to be metallic/glossy and cover large surfaces
+    const isMetallic = material.metalness > 0.3 || material.roughness < 0.5;
+    const isColored = material.color && !(material.color.r < 0.1 && material.color.g < 0.1 && material.color.b < 0.1); // not pure black
+    const isNotTransparent = !material.transparent || material.opacity > 0.8;
+
+    // Check geometry size — body panels are large
+    let isLarge = false;
+    if (mesh.geometry) {
+      mesh.geometry.computeBoundingBox();
+      const box = mesh.geometry.boundingBox;
+      if (box) {
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        isLarge = Math.max(size.x, size.y, size.z) > 0.1;
+      }
+    }
+
+    // Positive indicators
+    const bodyHints = ["body", "paint", "car", "hood", "fender", "door", "bumper",
+      "roof", "trunk", "bonnet", "panel", "shell", "exterior", "carrosserie", "lak"];
+    const isNamedBody = bodyHints.some(h => name.includes(h));
+
+    return isNamedBody || (isLarge && isMetallic && isNotTransparent);
+  };
+
+  // Load model
   const carGroup = new THREE.Group();
   scene.add(carGroup);
 
@@ -236,37 +255,69 @@ function buildCar(canvas, modelUrl) {
       (gltf) => {
         const model = gltf.scene;
 
-        // Scale to fill viewport
+        // Scale
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
         const scale = 8.0 / maxDim;
         model.scale.setScalar(scale);
 
-        // Center and ground
+        // Center
         const sBox = new THREE.Box3().setFromObject(model);
         const sCenter = sBox.getCenter(new THREE.Vector3());
         model.position.x -= sCenter.x;
         model.position.z -= sCenter.z;
         model.position.y -= sBox.min.y;
 
-        // Shadows on every mesh
+        // Detect body materials + apply initial color
         model.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            mats.forEach(mat => {
+              if (isBodyMaterial(child, mat)) {
+                // Store original color for reference
+                mat.userData.originalColor = mat.color.clone();
+                bodyMaterials.push(mat);
+              }
+            });
           }
         });
 
+        // Apply initial color if provided
+        if (initialBodyColor && bodyMaterials.length > 0) {
+          const color = new THREE.Color(initialBodyColor);
+          bodyMaterials.forEach(mat => { mat.color.copy(color); mat.needsUpdate = true; });
+        }
+
         carGroup.add(model);
-        console.log('Model loaded!', size);
+        console.log(`Model loaded! ${bodyMaterials.length} body materials detected.`);
       },
       (p) => { if (p.total) console.log(`Loading: ${Math.round(p.loaded / p.total * 100)}%`); },
       (err) => console.error('GLB error:', err)
     );
   }
 
-  // ── ANIMATION ──
+  // Color change function — call this from React
+  const setBodyColor = (hexColor) => {
+    if (!hexColor || bodyMaterials.length === 0) return;
+    const color = new THREE.Color(hexColor);
+    bodyMaterials.forEach(mat => { mat.color.copy(color); mat.needsUpdate = true; });
+  };
+
+  // Reset to original colors
+  const resetBodyColor = () => {
+    bodyMaterials.forEach(mat => {
+      if (mat.userData.originalColor) {
+        mat.color.copy(mat.userData.originalColor);
+        mat.needsUpdate = true;
+      }
+    });
+  };
+
+  // Animation
   let mx = 0, af, tr = 0, cr = 0;
   const onM = e => { const rc = canvas.getBoundingClientRect(); mx = ((e.clientX - rc.left) / rc.width - 0.5) * 2; };
   canvas.addEventListener("mousemove", onM);
@@ -280,7 +331,12 @@ function buildCar(canvas, modelUrl) {
   anim();
   const onR = () => { const nw = canvas.clientWidth, nh = canvas.clientHeight; cam.aspect = nw / nh; cam.updateProjectionMatrix(); renderer.setSize(nw, nh); };
   window.addEventListener("resize", onR);
-  return () => { cancelAnimationFrame(af); canvas.removeEventListener("mousemove", onM); window.removeEventListener("resize", onR); renderer.dispose(); };
+
+  return {
+    cleanup: () => { cancelAnimationFrame(af); canvas.removeEventListener("mousemove", onM); window.removeEventListener("resize", onR); renderer.dispose(); },
+    setBodyColor,
+    resetBodyColor,
+  };
 }
 
 /* ═══════════════════════════════════════════
@@ -448,6 +504,8 @@ export default function AdminDashboard() {
   const [editVehicleModel, setEditVehicleModel] = useState("");
   const [current3DUrl, setCurrent3DUrl] = useState(null);
   const [no3DModel, setNo3DModel] = useState(false);
+  const [selectedBodyColor, setSelectedBodyColor] = useState(null);
+  const sceneRef = useRef(null); // holds { cleanup, setBodyColor, resetBodyColor }
   const [dbVehicles, setDbVehicles] = useState([]);
   const [dbClients, setDbClients] = useState([]);
   const [newVehicleOpen, setNewVehicleOpen] = useState(false);
@@ -709,22 +767,47 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!canvasRef.current || nav !== "dashboard") return;
     if (cleanRef.current) cleanRef.current();
+    if (sceneRef.current) { sceneRef.current = null; }
 
     const vehicle = allVehicles[dashCarIdx % allVehicles.length];
     const modelUrl = vehicle ? get3DUrl(vehicle.id) : null;
+    // Get saved color for this vehicle
+    const savedColor = vehicle ? (localStorage.getItem(`rau_color_${vehicle.id}`) || null) : null;
+    setSelectedBodyColor(savedColor);
 
     if (modelUrl) {
       setNo3DModel(false);
       setCurrent3DUrl(modelUrl);
-      cleanRef.current = buildCar(canvasRef.current, modelUrl);
+      const result = buildCar(canvasRef.current, modelUrl, savedColor);
+      cleanRef.current = result.cleanup;
+      sceneRef.current = result;
     } else {
       setNo3DModel(true);
       setCurrent3DUrl(null);
-      // Still render empty studio
-      cleanRef.current = buildCar(canvasRef.current, null);
+      const result = buildCar(canvasRef.current, null, null);
+      cleanRef.current = result.cleanup;
+      sceneRef.current = result;
     }
     return () => { if (cleanRef.current) cleanRef.current(); };
   }, [nav, dashCarIdx, vehicleLinks, dbModels]);
+
+  // Change body color in realtime
+  const changeBodyColor = (hex) => {
+    setSelectedBodyColor(hex);
+    if (sceneRef.current?.setBodyColor) sceneRef.current.setBodyColor(hex);
+    // Save per vehicle
+    const vehicle = allVehicles[dashCarIdx % allVehicles.length];
+    if (vehicle && hex) {
+      localStorage.setItem(`rau_color_${vehicle.id}`, hex);
+    }
+  };
+
+  const resetColor = () => {
+    setSelectedBodyColor(null);
+    if (sceneRef.current?.resetBodyColor) sceneRef.current.resetBodyColor();
+    const vehicle = allVehicles[dashCarIdx % allVehicles.length];
+    if (vehicle) localStorage.removeItem(`rau_color_${vehicle.id}`);
+  };
   const activeClients = clients.filter(c => c.status === "active").length;
   const monthlyRevenue = clients.filter(c => c.status === "active").reduce((s, c) => s + c.monthlyFee, 0);
   const pendingServices = services.filter(s => s.status !== "completed").length;
@@ -814,6 +897,49 @@ export default function AdminDashboard() {
             );
           })}
         </div>
+
+        {/* Color swatches — only show when 3D model is loaded */}
+        {!no3DModel && (
+          <div style={{
+            position: "absolute", top: isMobile ? "auto" : 24, bottom: isMobile ? 60 : "auto",
+            right: isMobile ? 16 : 28, zIndex: 12,
+            display: "flex", flexDirection: isMobile ? "row" : "column", gap: 6, alignItems: "center",
+          }}>
+            <div style={{ fontSize: 8, letterSpacing: "0.2em", color: C.textMuted, marginBottom: isMobile ? 0 : 4, writingMode: isMobile ? "initial" : "initial" }}>KLEUR</div>
+            {[
+              { name: "Rosso Corsa", hex: "#cc2020" },
+              { name: "Nero", hex: "#1a1a1a" },
+              { name: "Bianco Avus", hex: "#e8e6e0" },
+              { name: "Grigio Silverstone", hex: "#8a8a8a" },
+              { name: "Blu Pozzi", hex: "#1e3a6a" },
+              { name: "Verde British", hex: "#1a4a2a" },
+              { name: "Giallo Modena", hex: "#e8c820" },
+              { name: "Arancio Dino", hex: "#d4682a" },
+            ].map(c => (
+              <div key={c.hex} onClick={() => changeBodyColor(c.hex)} title={c.name} style={{
+                width: 26, height: 26, borderRadius: "50%", cursor: "pointer",
+                background: c.hex,
+                border: `2px solid ${selectedBodyColor === c.hex ? C.gold : "rgba(255,255,255,0.15)"}`,
+                boxShadow: selectedBodyColor === c.hex ? `0 0 10px ${C.gold}80` : "0 2px 6px rgba(0,0,0,0.3)",
+                transition: "all 0.2s",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.2)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+              />
+            ))}
+            {selectedBodyColor && (
+              <div onClick={resetColor} style={{
+                width: 26, height: 26, borderRadius: "50%", cursor: "pointer",
+                background: C.surface, border: `1px solid ${C.panelBorder}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 12, color: C.textMuted, transition: "all 0.2s",
+              }} title="Reset naar origineel"
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.panelBorder; }}
+              >↺</div>
+            )}
+          </div>
+        )}
 
         {/* Bottom gradient */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 100, background: `linear-gradient(transparent, ${C.bg})`, pointerEvents: "none", zIndex: 5 }} />
