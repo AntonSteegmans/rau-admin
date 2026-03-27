@@ -1023,7 +1023,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Bottom overlay — car info ── */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10, padding: isMobile ? "0 20px 16px" : "0 36px 24px" }}>
+        <div style={{ position: "absolute", bottom: 70, left: 0, right: 0, zIndex: 10, padding: isMobile ? "0 20px" : "0 36px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             {/* Left: car name */}
             <div>
@@ -1034,64 +1034,66 @@ export default function AdminDashboard() {
               <div style={{ marginTop: 10 }}><StatusBadge status={dashVehicle?.status || "garaged"} /></div>
             </div>
 
-            {/* Right: color swatches + nav */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              {/* Color swatches */}
-              {!no3DModel && (
-                <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                  {[
-                    { name: "Rosso", hex: "#cc2020" },
-                    { name: "Nero", hex: "#1a1a1a" },
-                    { name: "Bianco", hex: "#e8e6e0" },
-                    { name: "Grigio", hex: "#8a8a8a" },
-                    { name: "Blu", hex: "#1e3a6a" },
-                    { name: "Verde", hex: "#1a4a2a" },
-                    { name: "Giallo", hex: "#e8c820" },
-                    { name: "Arancio", hex: "#d4682a" },
-                  ].map(c => (
-                    <div key={c.hex} onClick={() => changeBodyColor(c.hex)} title={c.name} style={{
-                      width: 22, height: 22, borderRadius: "50%", cursor: "pointer", background: c.hex,
-                      border: `2px solid ${selectedBodyColor === c.hex ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.12)"}`,
-                      transition: "all 0.2s",
-                    }}
-                      onMouseEnter={e => e.currentTarget.style.transform = "scale(1.25)"}
-                      onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                    />
-                  ))}
-                  {selectedBodyColor && (
-                    <div onClick={resetColor} title="Reset" style={{
-                      width: 22, height: 22, borderRadius: "50%", cursor: "pointer",
-                      background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
-                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "rgba(255,255,255,0.4)",
-                    }}>↺</div>
-                  )}
-                </div>
-              )}
-
-              {/* Vehicle prev/next */}
+            {/* Right: nav arrows */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {allVehicles.length > 1 && (
                 <div style={{ display: "flex", gap: 6 }}>
                   <div onClick={() => setDashCarIdx(i => (i - 1 + allVehicles.length) % allVehicles.length)} style={{
-                    width: 36, height: 36, borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)",
+                    width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
                     display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
                     color: "rgba(255,255,255,0.4)", fontSize: 16, transition: "all 0.2s", background: "rgba(255,255,255,0.03)",
                   }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
                   >‹</div>
                   <div onClick={() => setDashCarIdx(i => (i + 1) % allVehicles.length)} style={{
-                    width: 36, height: 36, borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)",
+                    width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
                     display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
                     color: "rgba(255,255,255,0.4)", fontSize: 16, transition: "all 0.2s", background: "rgba(255,255,255,0.03)",
                   }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
                   >›</div>
                 </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* Color swatches — floating right side */}
+        {!no3DModel && (
+          <div style={{
+            position: "absolute", right: isMobile ? 16 : 36, bottom: isMobile ? 75 : 75, zIndex: 12,
+            display: "flex", gap: 5, alignItems: "center",
+          }}>
+            {[
+              { name: "Rosso", hex: "#cc2020" },
+              { name: "Nero", hex: "#1a1a1a" },
+              { name: "Bianco", hex: "#e8e6e0" },
+              { name: "Grigio", hex: "#8a8a8a" },
+              { name: "Blu", hex: "#1e3a6a" },
+              { name: "Verde", hex: "#1a4a2a" },
+              { name: "Giallo", hex: "#e8c820" },
+              { name: "Arancio", hex: "#d4682a" },
+            ].map(c => (
+              <div key={c.hex} onClick={() => changeBodyColor(c.hex)} title={c.name} style={{
+                width: 20, height: 20, borderRadius: "50%", cursor: "pointer", background: c.hex,
+                border: `2px solid ${selectedBodyColor === c.hex ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.12)"}`,
+                transition: "all 0.2s",
+              }}
+                onMouseEnter={e => e.currentTarget.style.transform = "scale(1.25)"}
+                onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+              />
+            ))}
+            {selectedBodyColor && (
+              <div onClick={resetColor} title="Reset" style={{
+                width: 20, height: 20, borderRadius: "50%", cursor: "pointer",
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "rgba(255,255,255,0.4)",
+              }}>↺</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ─── BOTTOM INFO CARDS ─── */}
@@ -1100,10 +1102,10 @@ export default function AdminDashboard() {
 
           {/* INFO card */}
           <div style={{
-            background: "rgba(130,150,170,0.07)", border: "1px solid rgba(150,170,190,0.1)",
+            background: "rgba(100,130,170,0.12)", border: "1px solid rgba(120,150,190,0.15)",
             borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
-            boxShadow: "0 4px 30px rgba(0,0,0,0.3)",
+            backdropFilter: "blur(50px) saturate(1.3)", WebkitBackdropFilter: "blur(50px) saturate(1.3)",
+            boxShadow: "0 4px 30px rgba(0,10,30,0.4), inset 0 1px 0 rgba(140,170,210,0.06)",
           }}>
             <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>INFO</div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
@@ -1121,10 +1123,10 @@ export default function AdminDashboard() {
 
           {/* VANDAAG card */}
           <div style={{
-            background: "rgba(130,150,170,0.07)", border: "1px solid rgba(150,170,190,0.1)",
+            background: "rgba(100,130,170,0.12)", border: "1px solid rgba(120,150,190,0.15)",
             borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
-            boxShadow: "0 4px 30px rgba(0,0,0,0.3)",
+            backdropFilter: "blur(50px) saturate(1.3)", WebkitBackdropFilter: "blur(50px) saturate(1.3)",
+            boxShadow: "0 4px 30px rgba(0,10,30,0.4), inset 0 1px 0 rgba(140,170,210,0.06)",
           }}>
             <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>VANDAAG</div>
             {services.filter(s => s.status === "in-progress" || s.status === "scheduled").slice(0, 2).map(s => {
@@ -1154,10 +1156,10 @@ export default function AdminDashboard() {
 
           {/* PLANNING card */}
           <div style={{
-            background: "rgba(130,150,170,0.07)", border: "1px solid rgba(150,170,190,0.1)",
+            background: "rgba(100,130,170,0.12)", border: "1px solid rgba(120,150,190,0.15)",
             borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
-            boxShadow: "0 4px 30px rgba(0,0,0,0.3)",
+            backdropFilter: "blur(50px) saturate(1.3)", WebkitBackdropFilter: "blur(50px) saturate(1.3)",
+            boxShadow: "0 4px 30px rgba(0,10,30,0.4), inset 0 1px 0 rgba(140,170,210,0.06)",
           }}>
             <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>PLANNING</div>
             {[
