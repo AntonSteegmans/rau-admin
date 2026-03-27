@@ -1095,14 +1095,15 @@ export default function AdminDashboard() {
       </div>
 
       {/* ─── BOTTOM INFO CARDS ─── */}
-      <div style={{ flex: "0 0 auto", padding: isMobile ? "0 16px 20px" : "0 36px 28px", background: "transparent", marginTop: -40, position: "relative", zIndex: 15 }}>
+      <div style={{ flex: "0 0 auto", padding: isMobile ? "0 16px 20px" : "0 36px 28px", background: "transparent", marginTop: -60, position: "relative", zIndex: 15 }}>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 12 : 16 }}>
 
           {/* INFO card */}
           <div style={{
-            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 12, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+            background: "rgba(130,150,170,0.07)", border: "1px solid rgba(150,170,190,0.1)",
+            borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
+            backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
+            boxShadow: "0 4px 30px rgba(0,0,0,0.3)",
           }}>
             <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>INFO</div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
@@ -1120,9 +1121,10 @@ export default function AdminDashboard() {
 
           {/* VANDAAG card */}
           <div style={{
-            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 12, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+            background: "rgba(130,150,170,0.07)", border: "1px solid rgba(150,170,190,0.1)",
+            borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
+            backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
+            boxShadow: "0 4px 30px rgba(0,0,0,0.3)",
           }}>
             <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>VANDAAG</div>
             {services.filter(s => s.status === "in-progress" || s.status === "scheduled").slice(0, 2).map(s => {
@@ -1152,9 +1154,10 @@ export default function AdminDashboard() {
 
           {/* PLANNING card */}
           <div style={{
-            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 12, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+            background: "rgba(130,150,170,0.07)", border: "1px solid rgba(150,170,190,0.1)",
+            borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
+            backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
+            boxShadow: "0 4px 30px rgba(0,0,0,0.3)",
           }}>
             <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>PLANNING</div>
             {[
