@@ -141,7 +141,7 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1;
+  renderer.toneMappingExposure = 1.5;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -186,7 +186,7 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   scene.add(contactShadow);
 
   // Lighting — dramatic but bright on the car
-  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
   const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
   sunLight.position.set(4, 10, 4);
   sunLight.castShadow = true;
