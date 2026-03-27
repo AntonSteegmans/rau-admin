@@ -141,7 +141,7 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.5;
+  renderer.toneMappingExposure = 1.7;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -154,39 +154,64 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   cam.position.set(6, 2.2, 6);
   cam.lookAt(0, 0.3, 0);
 
-  // Floor
+  // Floor — visible dark reflective surface with light pool
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(100, 100),
-    new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3, metalness: 0.8 })
+    new THREE.CircleGeometry(12, 64),
+    new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.2, metalness: 0.9 })
   );
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = 0;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  // Contact shadow
+  // Soft edge ring around the floor (fades to background)
+  const edgeCanvas = document.createElement('canvas');
+  edgeCanvas.width = 512; edgeCanvas.height = 512;
+  const edgeCtx = edgeCanvas.getContext('2d');
+  const edgeGrad = edgeCtx.createRadialGradient(256, 256, 80, 256, 256, 256);
+  edgeGrad.addColorStop(0, 'rgba(25,25,25,1)');
+  edgeGrad.addColorStop(0.6, 'rgba(18,18,18,0.8)');
+  edgeGrad.addColorStop(1, 'rgba(10,10,10,0)');
+  edgeCtx.fillStyle = edgeGrad;
+  edgeCtx.fillRect(0, 0, 512, 512);
+  const edgeTex = new THREE.CanvasTexture(edgeCanvas);
+  const floorGlow = new THREE.Mesh(
+    new THREE.PlaneGeometry(30, 30),
+    new THREE.MeshBasicMaterial({ map: edgeTex, transparent: true, depthWrite: false })
+  );
+  floorGlow.rotation.x = -Math.PI / 2;
+  floorGlow.position.y = -0.01;
+  scene.add(floorGlow);
+
+  // Floor spotlight — creates visible pool of light
+  const floorSpot = new THREE.SpotLight(0xffffff, 2.0, 20, Math.PI / 4, 1.0, 1);
+  floorSpot.position.set(0, 10, 0);
+  floorSpot.lookAt(0, 0, 0);
+  scene.add(floorSpot);
+
+  // Contact shadow — soft dark ellipse under the car
   const shadowCanvas = document.createElement('canvas');
   shadowCanvas.width = 512;
   shadowCanvas.height = 512;
   const ctx = shadowCanvas.getContext('2d');
-  const gradient = ctx.createRadialGradient(256, 256, 20, 256, 256, 220);
-  gradient.addColorStop(0, 'rgba(0,0,0,0.5)');
-  gradient.addColorStop(0.4, 'rgba(0,0,0,0.25)');
-  gradient.addColorStop(0.7, 'rgba(0,0,0,0.08)');
+  const gradient = ctx.createRadialGradient(256, 256, 10, 256, 256, 240);
+  gradient.addColorStop(0, 'rgba(0,0,0,0.7)');
+  gradient.addColorStop(0.3, 'rgba(0,0,0,0.4)');
+  gradient.addColorStop(0.6, 'rgba(0,0,0,0.15)');
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 512, 512);
   const shadowTex = new THREE.CanvasTexture(shadowCanvas);
   const contactShadow = new THREE.Mesh(
-    new THREE.PlaneGeometry(7, 4),
+    new THREE.PlaneGeometry(8, 5),
     new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
   );
   contactShadow.rotation.x = -Math.PI / 2;
-  contactShadow.position.set(0, 0.01, 0);
+  contactShadow.position.set(0, 0.005, 0);
   scene.add(contactShadow);
 
   // Lighting — dramatic but bright on the car
-  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
   const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
   sunLight.position.set(4, 10, 4);
   sunLight.castShadow = true;
