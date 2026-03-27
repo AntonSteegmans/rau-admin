@@ -141,7 +141,7 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 2.0;
+  renderer.toneMappingExposure = 1.7;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -186,8 +186,8 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   scene.add(contactShadow);
 
   // Lighting — dramatic but bright on the car
-  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-  const sunLight = new THREE.DirectionalLight(0xffffff, 3.5);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
   sunLight.position.set(4, 10, 4);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
@@ -199,19 +199,19 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
   sunLight.shadow.camera.far = 25;
   sunLight.shadow.bias = -0.001;
   scene.add(sunLight);
-  const keyLight = new THREE.SpotLight(0xffffff, 6.0, 35, Math.PI / 4, 0.5);
+  const keyLight = new THREE.SpotLight(0xffffff, 5.0, 35, Math.PI / 4, 0.5);
   keyLight.position.set(6, 6, 5); keyLight.lookAt(0, 0, 0); scene.add(keyLight);
-  const fillLight = new THREE.SpotLight(0xeeeeff, 3.5, 35, Math.PI / 3, 0.6);
+  const fillLight = new THREE.SpotLight(0xeeeeff, 2.5, 35, Math.PI / 3, 0.6);
   fillLight.position.set(-7, 5, 2); fillLight.lookAt(0, 0, 0); scene.add(fillLight);
-  const rimLight = new THREE.SpotLight(0xffffff, 5.0, 30, Math.PI / 5, 0.4);
+  const rimLight = new THREE.SpotLight(0xffffff, 4.0, 30, Math.PI / 5, 0.4);
   rimLight.position.set(-2, 4, -7); rimLight.lookAt(0, 0.5, 0); scene.add(rimLight);
   const topLight = new THREE.PointLight(0xffffff, 2.5, 30);
   topLight.position.set(0, 12, 0); scene.add(topLight);
   // Extra front light to illuminate the front of the car
-  const frontLight = new THREE.SpotLight(0xffffff, 3.0, 30, Math.PI / 4, 0.5);
+  const frontLight = new THREE.SpotLight(0xffffff, 2.0, 30, Math.PI / 4, 0.5);
   frontLight.position.set(-6, 3, 5); frontLight.lookAt(0, 0.5, 0); scene.add(frontLight);
   // Low side fill to reduce harsh shadows underneath
-  const lowFill = new THREE.PointLight(0xddddff, 1.5, 15);
+  const lowFill = new THREE.PointLight(0xddddff, 1.0, 15);
   lowFill.position.set(4, 0.5, 0); scene.add(lowFill);
 
   // Track body materials for color changes
