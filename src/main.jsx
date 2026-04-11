@@ -12,27 +12,33 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   const loadProfile = async (user) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("role, client_id")
-      .eq("id", user.id)
-      .single();
-    setSession(user);
-    setRole(data?.role ?? "client");
-    setClientId(data?.client_id ?? null);
-    setLoading(false);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role, client_id")
+        .eq("id", user.id)
+        .single();
+      setSession(user);
+      setRole(data?.role ?? "client");
+      setClientId(data?.client_id ?? null);
+    } catch (err) {
+      console.error("Profiel laden mislukt:", err);
+      setSession(user);
+      setRole("client");
+      setClientId(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    // onAuthStateChange fires INITIAL_SESSION immediately with the current
-    // session (or null), so we don't need a separate getSession() call.
+    // Supabase v2: calling supabase.from() directly inside onAuthStateChange
+    // can deadlock. Defer loadProfile with setTimeout to escape the lock.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (session) {
-          // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED — always reload profile
-          await loadProfile(session.user);
+          setTimeout(() => loadProfile(session.user), 0);
         } else {
-          // SIGNED_OUT or no session on first load
           setSession(null);
           setRole(null);
           setClientId(null);
