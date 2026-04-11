@@ -184,7 +184,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
   const canvasRef  = useRef(null);
   const cleanupRef = useRef(null);
 
-  useEffect(() => { if (clientId) loadAll(); }, [clientId]);
+  useEffect(() => { if (clientId) loadAll(); else setLoading(false); }, [clientId]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -206,12 +206,12 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
   const modelUrl  = modelPath ? supabase.storage.from("3d-models").getPublicUrl(modelPath).data.publicUrl : null;
 
   useEffect(() => {
-    if (!canvasRef.current || nav !== "dashboard") return;
+    if (loading || !canvasRef.current || nav !== "dashboard") return;
     if (cleanupRef.current) { cleanupRef.current(); cleanupRef.current = null; }
     const result = buildScene(canvasRef.current, modelUrl);
     cleanupRef.current = result.cleanup;
     return () => { if (cleanupRef.current) cleanupRef.current(); };
-  }, [vehicle?.id, modelUrl, nav]);
+  }, [loading, vehicle?.id, modelUrl, nav]);
 
   const firstName  = client?.name?.split(" ")[0] ?? "Welkom";
   const brandName  = vehicle?.models?.brands?.name ?? "";
