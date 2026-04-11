@@ -536,25 +536,7 @@ const ChartTip = ({ active, payload }) => {
 /* ═══════════════════════════════════════════
    MAIN APP
    ═══════════════════════════════════════════ */
-export default function AdminDashboard() {
-  // PIN lock
-  const [pinLocked, setPinLocked] = useState(() => !sessionStorage.getItem("rau_unlocked"));
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState(false);
-  const PIN_CODE = "2026";
-
-  const checkPin = () => {
-    if (pinInput === PIN_CODE) {
-      sessionStorage.setItem("rau_unlocked", "true");
-      setPinLocked(false);
-      setPinInput("");
-      setPinError(false);
-    } else {
-      setPinError(true);
-      setPinInput("");
-    }
-  };
-
+export default function AdminDashboard({ user, onSignOut }) {
   // Mobile detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
@@ -609,6 +591,12 @@ export default function AdminDashboard() {
   const [vehicleForm, setVehicleForm] = useState({ client_id: "", model_id: "", plate: "", color: "", mileage: "", status: "garaged", next_service: "", value: "" });
   const [editingVehicleId, setEditingVehicleId] = useState(null);
 
+  // Supabase state — services, facturen, berichten, team
+  const [dbServices, setDbServices] = useState([]);
+  const [dbInvoices, setDbInvoices] = useState([]);
+  const [dbMessages, setDbMessages] = useState([]);
+  const [dbTeam, setDbTeam] = useState([]);
+
   useEffect(() => { setTimeout(() => setLoaded(true), 200); }, []);
 
   // Load brands & models from Supabase
@@ -625,8 +613,61 @@ export default function AdminDashboard() {
     if (data) setDbVehicles(data);
   };
   const loadClients = async () => {
-    const { data } = await supabase.from("clients").select("*").order("name");
+    const { data } = await supabase.from("clients")
+      .select("*, vehicles(id, plate, color, mileage, status, value, next_service, models(name, brands(name)))")
+      .order("name");
     if (data) setDbClients(data);
+  };
+
+  const formatRelTime = (ts) => {
+    const diff = Date.now() - new Date(ts).getTime();
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    if (h < 1) return "Zojuist";
+    if (h < 24) return `${h}u geleden`;
+    if (d < 7) return `${d}d geleden`;
+    return new Date(ts).toLocaleDateString("nl-BE");
+  };
+
+  const loadServices = async () => {
+    const { data } = await supabase.from("services")
+      .select("*, vehicles(id, plate, models(name, brands(name))), clients(name)")
+      .order("date");
+    if (data) setDbServices(data.map(s => ({
+      ...s,
+      vehicleId: s.vehicle_id,
+      clientId: s.client_id,
+      tech: s.technician,
+      estimatedCost: s.estimated_cost ?? 0,
+      desc: s.description,
+    })));
+  };
+
+  const loadInvoices = async () => {
+    const { data } = await supabase.from("invoices")
+      .select("*, clients(name)")
+      .order("date", { ascending: false });
+    if (data) setDbInvoices(data.map(inv => ({
+      ...inv,
+      clientName: inv.clients?.name ?? "—",
+    })));
+  };
+
+  const loadMessages = async () => {
+    const { data } = await supabase.from("messages")
+      .select("*, clients(name)")
+      .order("created_at", { ascending: false });
+    if (data) setDbMessages(data.map(m => ({
+      ...m,
+      clientName: m.clients?.name ?? "—",
+      preview: m.body,
+      time: formatRelTime(m.created_at),
+    })));
+  };
+
+  const loadTeam = async () => {
+    const { data } = await supabase.from("team").select("*").order("name");
+    if (data) setDbTeam(data.map(t => ({ ...t, active: t.active_tasks ?? 0 })));
   };
   const seedDemoClients = async () => {
     const demoClients = clients.map(c => ({ name: c.name, email: c.email, phone: c.phone, company: c.company, tier: c.tier, monthly_fee: c.monthlyFee, status: c.status }));
@@ -671,7 +712,7 @@ export default function AdminDashboard() {
     loadVehicles();
     loadClients();
   };
-  useEffect(() => { loadBrands(); loadModels(); loadVehicles(); loadClients(); }, []);
+  useEffect(() => { loadBrands(); loadModels(); loadVehicles(); loadClients(); loadServices(); loadInvoices(); loadMessages(); loadTeam(); }, []);
 
   // Flash message helper
   const flash = (msg) => { setSettingsMsg(msg); setTimeout(() => setSettingsMsg(null), 3000); };
@@ -915,14 +956,14 @@ export default function AdminDashboard() {
     const vehicle = allVehicles[dashCarIdx % allVehicles.length];
     if (vehicle) localStorage.removeItem(`rau_color_${vehicle.id}`);
   };
-  const activeClients = clients.filter(c => c.status === "active").length;
-  const monthlyRevenue = clients.filter(c => c.status === "active").reduce((s, c) => s + c.monthlyFee, 0);
-  const pendingServices = services.filter(s => s.status !== "completed").length;
-  const unreadMessages = messages.filter(m => !m.read).length;
+  const activeClients = dbClients.filter(c => c.status === "active").length;
+  const monthlyRevenue = dbClients.filter(c => c.status === "active").reduce((s, c) => s + (c.monthly_fee ?? 0), 0);
+  const pendingServices = dbServices.filter(s => s.status !== "completed").length;
+  const unreadMessages = dbMessages.filter(m => !m.read).length;
   const sw = 0; // Full width — sidebar is overlay-only
 
   const getVehicle = (vid) => allVehicles.find(v => v.id === vid);
-  const getClient = (cid) => clients.find(c => c.id === cid);
+  const getClient = (cid) => dbClients.find(c => c.id === cid);
 
   /* ═══ DASHBOARD ═══ */
   const dashVehicle = allVehicles[dashCarIdx % allVehicles.length];
@@ -1129,8 +1170,8 @@ export default function AdminDashboard() {
             boxShadow: "0 4px 30px rgba(0,10,30,0.4), inset 0 1px 0 rgba(140,170,210,0.06)",
           }}>
             <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>VANDAAG</div>
-            {services.filter(s => s.status === "in-progress" || s.status === "scheduled").slice(0, 2).map(s => {
-              const sv = getVehicle(s.vehicleId);
+            {dbServices.filter(s => s.status === "in-progress" || s.status === "scheduled").slice(0, 2).map(s => {
+              const sv = getVehicle(s.vehicle_id);
               return (
                 <Hov key={s.id} onClick={() => setSelectedService(s)} style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -1141,7 +1182,7 @@ export default function AdminDashboard() {
                 </Hov>
               );
             })}
-            {services.filter(s => s.status === "in-progress" || s.status === "scheduled").length === 0 && (
+            {dbServices.filter(s => s.status === "in-progress" || s.status === "scheduled").length === 0 && (
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", padding: "12px 0" }}>Geen geplande services</div>
             )}
             <div onClick={() => setNewServiceOpen(true)} style={{
@@ -1185,7 +1226,7 @@ export default function AdminDashboard() {
   const renderClients = () => (
     <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 10 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500 }}>KLANTEN ({clients.length})</div>
+        <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500 }}>KLANTEN ({dbClients.length})</div>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ width: isMobile ? "100%" : 260 }}><SearchBar value={search} onChange={setSearch} placeholder="Zoek klant..." /></div>
           <Btn primary small>+ NIEUWE KLANT</Btn>
@@ -1197,19 +1238,19 @@ export default function AdminDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 0.8fr", padding: "12px 20px", borderBottom: `1px solid ${C.panelBorder}`, fontSize: 9, letterSpacing: "0.2em", color: C.textDark }}>
           <span>KLANT</span><span>TIER</span><span>WAGENS</span><span>MAANDBEDRAG</span><span>TOTAAL BESTEED</span><span>STATUS</span>
         </div>
-        {clients.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.company.toLowerCase().includes(search.toLowerCase())).map(c => (
+        {dbClients.filter(c => !search || c.name?.toLowerCase().includes(search.toLowerCase()) || c.company?.toLowerCase().includes(search.toLowerCase())).map(c => (
           <Hov key={c.id} onClick={() => setSelectedClient(c)} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 0.8fr", padding: "14px 20px", borderBottom: `1px solid ${C.panelBorder}10`, alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.goldSubtle, border: `1px solid ${C.goldDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: C.gold, fontWeight: 600, fontFamily: mono, flexShrink: 0 }}>{c.avatar}</div>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.goldSubtle, border: `1px solid ${C.goldDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: C.gold, fontWeight: 600, fontFamily: mono, flexShrink: 0 }}>{c.avatar || c.name?.[0] || "?"}</div>
               <div>
                 <div style={{ fontSize: 13, color: C.text, fontWeight: 400 }}>{c.name}</div>
                 <div style={{ fontSize: 10, color: C.textDark, marginTop: 1 }}>{c.company}</div>
               </div>
             </div>
             <TierBadge tier={c.tier} />
-            <span style={{ fontSize: 13, color: C.text, fontFamily: mono }}>{c.vehicles.length}</span>
-            <span style={{ fontSize: 13, color: C.gold, fontFamily: mono }}>€{c.monthlyFee.toLocaleString()}</span>
-            <span style={{ fontSize: 12, color: C.textMuted, fontFamily: mono }}>{fmtEuro(c.totalSpent)}</span>
+            <span style={{ fontSize: 13, color: C.text, fontFamily: mono }}>{c.vehicles?.length ?? 0}</span>
+            <span style={{ fontSize: 13, color: C.gold, fontFamily: mono }}>€{(c.monthly_fee ?? 0).toLocaleString()}</span>
+            <span style={{ fontSize: 12, color: C.textMuted, fontFamily: mono }}>{fmtEuro(c.total_spent ?? 0)}</span>
             <StatusBadge status={c.status} />
           </Hov>
         ))}
@@ -1333,7 +1374,7 @@ export default function AdminDashboard() {
 
   /* ═══ SERVICES ═══ */
   const renderServices = () => {
-    const filtered = services.filter(s => serviceFilter === "all" || s.status === serviceFilter);
+    const filtered = dbServices.filter(s => serviceFilter === "all" || s.status === serviceFilter);
     return (
       <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1355,16 +1396,17 @@ export default function AdminDashboard() {
             <span></span><span>SERVICE</span><span>WAGEN</span><span>KLANT</span><span>TECHNICUS</span><span>KOST</span><span>STATUS</span>
           </div>
           {filtered.map(s => {
-            const v = getVehicle(s.vehicleId);
-            const cl = getClient(s.clientId);
+            const v = getVehicle(s.vehicle_id);
+            const cl = getClient(s.client_id);
+            const vName = v ? `${v.make} ${v.name}` : `${s.vehicles?.models?.brands?.name || ""} ${s.vehicles?.models?.name || ""}`.trim() || "—";
             return (
               <Hov key={s.id} onClick={() => setSelectedService(s)} style={{ display: "grid", gridTemplateColumns: "0.3fr 1.5fr 1.5fr 1fr 1fr 0.8fr 0.8fr", padding: "14px 20px", borderBottom: `1px solid ${C.panelBorder}10`, alignItems: "center" }}>
                 <PriorityDot p={s.priority} />
                 <div><div style={{ fontSize: 12, color: C.text }}>{s.type}</div><div style={{ fontSize: 10, color: C.textDark, marginTop: 2 }}>{s.date}</div></div>
-                <div style={{ fontSize: 12, color: C.text }}>{v?.make} {v?.name}</div>
-                <div style={{ fontSize: 12, color: C.textMuted }}>{cl?.name?.split(" ").slice(0, 2).join(" ")}</div>
-                <div style={{ fontSize: 11, color: C.textMuted, fontFamily: mono }}>{s.tech}</div>
-                <div style={{ fontSize: 12, color: C.gold, fontFamily: mono }}>€{s.estimatedCost.toLocaleString()}</div>
+                <div style={{ fontSize: 12, color: C.text }}>{vName}</div>
+                <div style={{ fontSize: 12, color: C.textMuted }}>{(cl?.name || s.clients?.name || "—").split(" ").slice(0, 2).join(" ")}</div>
+                <div style={{ fontSize: 11, color: C.textMuted, fontFamily: mono }}>{s.technician || "—"}</div>
+                <div style={{ fontSize: 12, color: C.gold, fontFamily: mono }}>€{(s.estimated_cost ?? 0).toLocaleString()}</div>
                 <StatusBadge status={s.status} />
               </Hov>
             );
@@ -1376,8 +1418,8 @@ export default function AdminDashboard() {
 
   /* ═══ INVOICES ═══ */
   const renderInvoices = () => {
-    const filtered = invoices.filter(inv => invoiceFilter === "all" || inv.status === invoiceFilter);
-    const totalPending = invoices.filter(i => i.status === "pending" || i.status === "overdue").reduce((s, i) => s + i.amount, 0);
+    const filtered = dbInvoices.filter(inv => invoiceFilter === "all" || inv.status === invoiceFilter);
+    const totalPending = dbInvoices.filter(i => i.status === "pending" || i.status === "overdue").reduce((s, i) => s + (i.amount ?? 0), 0);
     return (
       <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1424,7 +1466,7 @@ export default function AdminDashboard() {
         <Btn primary small onClick={() => setComposeOpen(true)}>+ NIEUW BERICHT</Btn>
       </div>
       <Panel style={{ overflow: "hidden" }}>
-        {messages.map(m => (
+        {dbMessages.map(m => (
           <Hov key={m.id} style={{ padding: "16px 20px", borderBottom: `1px solid ${C.panelBorder}15` }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
               <div style={{ marginTop: 2 }}>
@@ -1454,9 +1496,9 @@ export default function AdminDashboard() {
   /* ═══ TEAM ═══ */
   const renderTeam = () => (
     <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500, marginBottom: 20 }}>TEAM ({team.length})</div>
+      <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500, marginBottom: 20 }}>TEAM ({dbTeam.length})</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
-        {team.map(t => (
+        {dbTeam.map(t => (
           <Panel key={t.id} style={{ padding: "22px 24px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
               <div style={{ width: 48, height: 48, borderRadius: "50%", background: C.goldSubtle, border: `2px solid ${t.status === "available" ? C.green : C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: C.gold, fontWeight: 600, fontFamily: mono }}>{t.avatar}</div>
@@ -1705,70 +1747,6 @@ export default function AdminDashboard() {
      RENDER
      ═══════════════════════════════════════════ */
 
-  // ── PIN LOCK SCREEN ──
-  if (pinLocked) {
-    return (
-      <div style={{ width: "100%", height: "100vh", background: "#060606", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans }}>
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet" />
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <div style={{ fontSize: 36, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.06em", marginBottom: 40 }}>raù</div>
-
-          <div style={{ fontSize: 10, letterSpacing: "0.25em", color: "rgba(255,255,255,0.25)", marginBottom: 20 }}>VOER PINCODE IN</div>
-
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 24 }}>
-            {[0, 1, 2, 3].map(i => (
-              <div key={i} style={{
-                width: 44, height: 52, borderRadius: 8,
-                border: `1.5px solid ${pinError ? "rgba(196,80,80,0.6)" : (pinInput.length > i ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.08)")}`,
-                background: "rgba(255,255,255,0.02)", display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 22, color: C.white, fontFamily: mono, transition: "all 0.2s",
-              }}>
-                {pinInput.length > i ? "•" : ""}
-              </div>
-            ))}
-          </div>
-
-          {pinError && <div style={{ fontSize: 11, color: C.red, marginBottom: 16 }}>Onjuiste pincode</div>}
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 64px)", gap: 8, justifyContent: "center", marginBottom: 16 }}>
-            {[1,2,3,4,5,6,7,8,9,null,0,"←"].map((n, i) => {
-              if (n === null) return <div key={i} />;
-              return (
-                <div key={i} onClick={() => {
-                  setPinError(false);
-                  if (n === "←") { setPinInput(p => p.slice(0, -1)); return; }
-                  const newPin = pinInput + String(n);
-                  setPinInput(newPin);
-                  if (newPin.length === 4) {
-                    setTimeout(() => {
-                      if (newPin === PIN_CODE) {
-                        sessionStorage.setItem("rau_unlocked", "true");
-                        setPinLocked(false);
-                        setPinInput("");
-                      } else {
-                        setPinError(true);
-                        setPinInput("");
-                      }
-                    }, 200);
-                  }
-                }} style={{
-                  width: 60, height: 52, borderRadius: 10,
-                  background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: n === "←" ? 18 : 20, color: "rgba(255,255,255,0.6)", fontFamily: mono,
-                  cursor: "pointer", transition: "all 0.15s", userSelect: "none",
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}
-                >{n}</div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // ── MAIN APP ──
   return (
     <div style={{ width: "100%", height: "100vh", background: C.bg, color: C.white, fontFamily: sans, overflow: "hidden", position: "relative", letterSpacing: "0.02em" }}>
@@ -1826,15 +1804,25 @@ export default function AdminDashboard() {
           })}
         </div>
 
-        {/* User */}
-        <div style={{ padding: "18px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono }}>AS</div>
-            <div>
-              <div style={{ fontSize: 12, color: C.text }}>Anton Steegmans</div>
+        {/* User + uitloggen */}
+        <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono, flexShrink: 0 }}>
+              {(user?.email?.[0] || "A").toUpperCase()}
+            </div>
+            <div style={{ overflow: "hidden" }}>
+              <div style={{ fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email || "Admin"}</div>
               <div style={{ fontSize: 10, color: C.textDark }}>Beheerder</div>
             </div>
           </div>
+          <div onClick={onSignOut} style={{
+            padding: "7px 14px", fontSize: 10, fontFamily: mono, letterSpacing: "0.15em",
+            border: "1px solid rgba(255,255,255,0.06)", color: C.textMuted,
+            borderRadius: 4, cursor: "pointer", textAlign: "center", transition: "all 0.2s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.color = C.white; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}
+          >UITLOGGEN</div>
         </div>
       </nav>
 
@@ -1876,15 +1864,15 @@ export default function AdminDashboard() {
       <Modal open={!!selectedClient} onClose={() => setSelectedClient(null)} title="KLANT DETAIL" width={640}>
         {selectedClient && <div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: C.goldSubtle, border: `2px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: C.gold, fontWeight: 600, fontFamily: mono }}>{selectedClient.avatar}</div>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: C.goldSubtle, border: `2px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: C.gold, fontWeight: 600, fontFamily: mono }}>{selectedClient.avatar || selectedClient.name?.[0] || "?"}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 18, color: C.white, fontWeight: 400 }}>{selectedClient.name}</div>
-              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{selectedClient.company} · Lid sinds {selectedClient.since}</div>
+              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{selectedClient.company} · Lid sinds {selectedClient.since || selectedClient.created_at?.split("T")[0] || "—"}</div>
             </div>
             <div style={{ textAlign: "right" }}><TierBadge tier={selectedClient.tier} /><div style={{ marginTop: 6 }}><StatusBadge status={selectedClient.status} /></div></div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
-            {[{ l: "MAANDBEDRAG", v: `€${selectedClient.monthlyFee.toLocaleString()}` }, { l: "TOTAAL BESTEED", v: fmtEuro(selectedClient.totalSpent) }, { l: "WAGENS", v: selectedClient.vehicles.length }].map((d, i) => (
+            {[{ l: "MAANDBEDRAG", v: `€${(selectedClient.monthly_fee ?? 0).toLocaleString()}` }, { l: "TOTAAL BESTEED", v: fmtEuro(selectedClient.total_spent ?? 0) }, { l: "WAGENS", v: selectedClient.vehicles?.length ?? 0 }].map((d, i) => (
               <div key={i} style={{ padding: "14px 16px", background: C.surface, borderRadius: 3 }}>
                 <div style={{ fontSize: 8, letterSpacing: "0.2em", color: C.textDark }}>{d.l}</div>
                 <div style={{ fontSize: 18, color: C.goldBright, fontFamily: mono, marginTop: 4 }}>{d.v}</div>
@@ -1892,15 +1880,18 @@ export default function AdminDashboard() {
             ))}
           </div>
           <div style={{ fontSize: 11, letterSpacing: "0.2em", color: C.text, fontWeight: 500, marginBottom: 10 }}>WAGENS</div>
-          {selectedClient.vehicles.map(v => (
-            <div key={v.id} style={{ padding: "12px 16px", background: C.surface, borderRadius: 3, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 13, color: C.text }}>{v.make} {v.name}</div>
-                <div style={{ fontSize: 10, color: C.textDark, fontFamily: mono, marginTop: 2 }}>{v.plate} · {v.color} · {v.mileage}</div>
+          {(selectedClient.vehicles || []).map(v => {
+            const vName = `${v.models?.brands?.name || ""} ${v.models?.name || ""}`.trim() || "Onbekend";
+            return (
+              <div key={v.id} style={{ padding: "12px 16px", background: C.surface, borderRadius: 3, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, color: C.text }}>{vName}</div>
+                  <div style={{ fontSize: 10, color: C.textDark, fontFamily: mono, marginTop: 2 }}>{v.plate} · {v.color} · {v.mileage}</div>
+                </div>
+                <div style={{ textAlign: "right" }}><StatusBadge status={v.status} /><div style={{ fontSize: 12, color: C.gold, fontFamily: mono, marginTop: 4 }}>{fmtEuro(v.value ?? 0)}</div></div>
               </div>
-              <div style={{ textAlign: "right" }}><StatusBadge status={v.status} /><div style={{ fontSize: 12, color: C.gold, fontFamily: mono, marginTop: 4 }}>{fmtEuro(v.value)}</div></div>
-            </div>
-          ))}
+            );
+          })}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
             {[{ l: "EMAIL", v: selectedClient.email }, { l: "TELEFOON", v: selectedClient.phone }].map((d, i) => (
               <div key={i} style={{ padding: "12px 14px", background: C.surface, borderRadius: 3 }}>
@@ -1919,25 +1910,26 @@ export default function AdminDashboard() {
       {/* Service detail */}
       <Modal open={!!selectedService} onClose={() => setSelectedService(null)} title="SERVICE DETAIL">
         {selectedService && (() => {
-          const v = getVehicle(selectedService.vehicleId);
-          const cl = getClient(selectedService.clientId);
+          const v = getVehicle(selectedService.vehicle_id);
+          const cl = getClient(selectedService.client_id);
+          const vName = v ? `${v.make} ${v.name}` : `${selectedService.vehicles?.models?.brands?.name || ""} ${selectedService.vehicles?.models?.name || ""}`.trim() || "—";
           return <div>
             <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               <StatusBadge status={selectedService.status} />
               <span style={{ fontSize: 10, fontFamily: mono, padding: "3px 10px", background: selectedService.priority === "high" ? C.redBg : C.surface, color: selectedService.priority === "high" ? C.red : C.textMuted, border: `1px solid ${selectedService.priority === "high" ? C.red + "40" : C.panelBorder}`, borderRadius: 2 }}>
-                {selectedService.priority.toUpperCase()}
+                {(selectedService.priority || "normal").toUpperCase()}
               </span>
             </div>
             <div style={{ fontSize: 16, color: C.white, marginBottom: 8 }}>{selectedService.type}</div>
-            <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 20, lineHeight: 1.6 }}>{selectedService.desc}</div>
+            <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 20, lineHeight: 1.6 }}>{selectedService.description}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
               {[
-                { l: "WAGEN", v: `${v?.make} ${v?.name}` },
-                { l: "KLANT", v: cl?.name },
-                { l: "TECHNICUS", v: selectedService.tech },
+                { l: "WAGEN", v: vName },
+                { l: "KLANT", v: cl?.name || selectedService.clients?.name || "—" },
+                { l: "TECHNICUS", v: selectedService.technician || "—" },
                 { l: "DATUM", v: selectedService.date },
-                { l: "GESCHATTE KOST", v: `€${selectedService.estimatedCost.toLocaleString()}` },
-                { l: "NUMMERPLAAT", v: v?.plate },
+                { l: "GESCHATTE KOST", v: `€${(selectedService.estimated_cost ?? 0).toLocaleString()}` },
+                { l: "NUMMERPLAAT", v: v?.plate || selectedService.vehicles?.plate || "—" },
               ].map((d, i) => (
                 <div key={i} style={{ padding: "12px 14px", background: C.surface, borderRadius: 3 }}>
                   <div style={{ fontSize: 8, letterSpacing: "0.2em", color: C.textDark }}>{d.l}</div>
@@ -2030,7 +2022,7 @@ export default function AdminDashboard() {
             <select value={composeClient} onChange={e => setComposeClient(e.target.value)}
               style={{ width: "100%", padding: "10px 14px", background: C.surface, border: `1px solid ${C.panelBorder}`, borderRadius: 3, color: C.text, fontSize: 12, fontFamily: sans, outline: "none" }}>
               <option value="">Selecteer klant...</option>
-              {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {dbClients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
           <div>
@@ -2057,7 +2049,7 @@ export default function AdminDashboard() {
             <div style={{ fontSize: 9, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>KLANT</div>
             <select style={{ width: "100%", padding: "10px 14px", background: C.surface, border: `1px solid ${C.panelBorder}`, borderRadius: 3, color: C.text, fontSize: 12, fontFamily: sans, outline: "none" }}>
               <option value="">Selecteer klant...</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {dbClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>
@@ -2081,7 +2073,7 @@ export default function AdminDashboard() {
             <div>
               <div style={{ fontSize: 9, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>TECHNICUS</div>
               <select style={{ width: "100%", padding: "10px 14px", background: C.surface, border: `1px solid ${C.panelBorder}`, borderRadius: 3, color: C.text, fontSize: 12, fontFamily: sans, outline: "none" }}>
-                {team.filter(t => t.role !== "Client Relations").map(t => <option key={t.id}>{t.name}</option>)}
+                {dbTeam.filter(t => t.role !== "Client Relations").map(t => <option key={t.id}>{t.name}</option>)}
               </select>
             </div>
           </div>
