@@ -588,8 +588,9 @@ export default function AdminDashboard({ user, onSignOut }) {
   const [dbVehicles, setDbVehicles] = useState([]);
   const [dbClients, setDbClients] = useState([]);
   const [newVehicleOpen, setNewVehicleOpen] = useState(false);
-  const [vehicleForm, setVehicleForm] = useState({ client_id: "", model_id: "", plate: "", color: "", mileage: "", status: "garaged", next_service: "", value: "" });
+  const [vehicleForm, setVehicleForm] = useState({ client_id: "", model_id: "", plate: "", color: "", mileage: "", status: "garaged", next_service: "", value: "", display_mode: "3d", image_path: "" });
   const [editingVehicleId, setEditingVehicleId] = useState(null);
+  const [vehicleImageUploading, setVehicleImageUploading] = useState(false);
 
   // Supabase state — services, facturen, berichten, team
   const [dbServices, setDbServices] = useState([]);
@@ -801,7 +802,17 @@ export default function AdminDashboard({ user, onSignOut }) {
   };
 
   // ── VEHICLE CRUD ──
-  const resetVehicleForm = () => setVehicleForm({ client_id: "", model_id: "", plate: "", color: "", mileage: "", status: "garaged", next_service: "", value: "" });
+  const resetVehicleForm = () => setVehicleForm({ client_id: "", model_id: "", plate: "", color: "", mileage: "", status: "garaged", next_service: "", value: "", display_mode: "3d", image_path: "" });
+
+  const uploadVehicleImage = async (file) => {
+    setVehicleImageUploading(true);
+    const ext = file.name.split(".").pop().toLowerCase();
+    const filePath = `vehicle-images/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("3d-models").upload(filePath, file, { upsert: true });
+    setVehicleImageUploading(false);
+    if (error) { flash("Fout bij uploaden: " + error.message); return null; }
+    return filePath;
+  };
 
   const addVehicle = async () => {
     const f = vehicleForm;
@@ -815,6 +826,8 @@ export default function AdminDashboard({ user, onSignOut }) {
       status: f.status,
       next_service: f.next_service || null,
       value: f.value ? parseInt(f.value) : 0,
+      display_mode: f.display_mode || "3d",
+      image_path: f.image_path || null,
     });
     if (error) { flash("Fout: " + error.message); return; }
     flash("Voertuig aangemaakt!");
@@ -835,6 +848,8 @@ export default function AdminDashboard({ user, onSignOut }) {
       status: f.status,
       next_service: f.next_service || null,
       value: f.value ? parseInt(f.value) : 0,
+      display_mode: f.display_mode || "3d",
+      image_path: f.image_path || null,
     }).eq("id", editingVehicleId);
     if (error) { flash("Fout: " + error.message); return; }
     flash("Voertuig bijgewerkt!");
@@ -1357,6 +1372,8 @@ export default function AdminDashboard({ user, onSignOut }) {
                         status: v.status || "garaged",
                         next_service: v.nextService || "",
                         value: v.value ? String(v.value) : "",
+                        display_mode: dbV?.display_mode || "3d",
+                        image_path: dbV?.image_path || "",
                       });
                       setNewVehicleOpen(true);
                     }} style={{ borderColor: C.gold + "40", color: C.gold }}>✎</Btn>
@@ -2179,6 +2196,57 @@ export default function AdminDashboard({ user, onSignOut }) {
                 <input value={vehicleForm.next_service} onChange={e => setVehicleForm({ ...vehicleForm, next_service: e.target.value })} type="date" style={inputStyle} />
               </div>
             </div>
+
+            {/* Display mode */}
+            <div>
+              <div style={{ fontSize: 9, letterSpacing: "0.2em", color: C.textDark, marginBottom: 8 }}>WEERGAVE IN KLANTPORTAAL</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[["3d", "3D MODEL"], ["image", "AFBEELDING"]].map(([val, label]) => (
+                  <div key={val} onClick={() => setVehicleForm({ ...vehicleForm, display_mode: val })}
+                    style={{ flex: 1, padding: "10px 14px", borderRadius: 6, cursor: "pointer", textAlign: "center",
+                      fontSize: 10, fontFamily: "monospace", letterSpacing: "0.12em", transition: "all 0.15s",
+                      background: vehicleForm.display_mode === val ? `rgba(138,154,110,0.12)` : C.surface,
+                      border: `1px solid ${vehicleForm.display_mode === val ? C.gold + "60" : C.panelBorder}`,
+                      color: vehicleForm.display_mode === val ? C.gold : C.textMuted,
+                    }}>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Image upload — only shown when display_mode === "image" */}
+            {vehicleForm.display_mode === "image" && (
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: "0.2em", color: C.textDark, marginBottom: 8 }}>VOERTUIGFOTO</div>
+                {vehicleForm.image_path && (
+                  <div style={{ marginBottom: 10, borderRadius: 8, overflow: "hidden", maxHeight: 160, position: "relative" }}>
+                    <img
+                      src={supabase.storage.from("3d-models").getPublicUrl(vehicleForm.image_path).data.publicUrl}
+                      alt="Voertuig"
+                      style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
+                    />
+                    <div onClick={() => setVehicleForm({ ...vehicleForm, image_path: "" })}
+                      style={{ position: "absolute", top: 8, right: 8, width: 24, height: 24, borderRadius: "50%",
+                        background: "rgba(0,0,0,0.7)", color: C.white, display: "flex", alignItems: "center",
+                        justifyContent: "center", cursor: "pointer", fontSize: 12 }}>✕</div>
+                  </div>
+                )}
+                <label style={{ display: "block", padding: "12px 16px", background: C.surface,
+                  border: `1px dashed ${vehicleImageUploading ? C.gold : C.panelBorder}`, borderRadius: 6,
+                  cursor: vehicleImageUploading ? "wait" : "pointer", textAlign: "center",
+                  fontSize: 11, color: vehicleImageUploading ? C.gold : C.textMuted, transition: "all 0.2s" }}>
+                  {vehicleImageUploading ? "UPLOADEN..." : vehicleForm.image_path ? "ANDERE FOTO KIEZEN" : "FOTO UPLOADEN"}
+                  <input type="file" accept="image/*" style={{ display: "none" }} disabled={vehicleImageUploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const path = await uploadVehicleImage(file);
+                      if (path) setVehicleForm(prev => ({ ...prev, image_path: path }));
+                    }} />
+                </label>
+              </div>
+            )}
 
             {/* Save / Cancel */}
             <div style={{ display: "flex", gap: 10, marginTop: 6 }}>

@@ -203,16 +203,18 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
   // 3D scene lifecycle
   const vehicle = vehicles[carIdx % Math.max(1, vehicles.length)] ?? null;
+  const displayMode = vehicle?.display_mode || "3d";
   const modelPath = vehicle?.models?.model_3d_path ?? null;
   const modelUrl  = modelPath ? supabase.storage.from("3d-models").getPublicUrl(modelPath).data.publicUrl : null;
+  const imageUrl  = vehicle?.image_path ? supabase.storage.from("3d-models").getPublicUrl(vehicle.image_path).data.publicUrl : null;
 
   useEffect(() => {
-    if (loading || !canvasRef.current || nav !== "dashboard") return;
+    if (loading || displayMode !== "3d" || !canvasRef.current || nav !== "dashboard") return;
     if (cleanupRef.current) { cleanupRef.current(); cleanupRef.current = null; }
     const result = buildScene(canvasRef.current, modelUrl);
     cleanupRef.current = result.cleanup;
     return () => { if (cleanupRef.current) cleanupRef.current(); };
-  }, [loading, vehicle?.id, modelUrl, nav]);
+  }, [loading, displayMode, vehicle?.id, modelUrl, nav]);
 
   const firstName  = client?.name?.split(" ")[0] ?? "Welkom";
   const brandName  = vehicle?.models?.brands?.name ?? "";
@@ -502,17 +504,34 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
       {/* ─── HERO ─── */}
       <div style={{ flex:1, position:"relative", overflow:"hidden", minHeight:0 }}>
-        {/* 3D canvas */}
-        <canvas ref={canvasRef} style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}/>
 
-        {/* No model placeholder */}
-        {!modelUrl && (
-          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-            <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:60, opacity:0.05 }}>⬡</div>
-              <div style={{ fontSize:11, color:"rgba(255,255,255,0.12)", fontFamily:mono, letterSpacing:"0.2em", marginTop:10 }}>GEEN 3D MODEL</div>
+        {/* Afbeelding modus */}
+        {displayMode === "image" ? (
+          imageUrl ? (
+            <img src={imageUrl} alt={`${brandName} ${modelName}`}
+              style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+          ) : (
+            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
+              <div style={{ textAlign:"center" }}>
+                <div style={{ fontSize:60, opacity:0.05 }}>◻</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.12)", fontFamily:mono, letterSpacing:"0.2em", marginTop:10 }}>GEEN AFBEELDING</div>
+              </div>
             </div>
-          </div>
+          )
+        ) : (
+          <>
+            {/* 3D canvas */}
+            <canvas ref={canvasRef} style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}/>
+            {/* No model placeholder */}
+            {!modelUrl && (
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
+                <div style={{ textAlign:"center" }}>
+                  <div style={{ fontSize:60, opacity:0.05 }}>⬡</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.12)", fontFamily:mono, letterSpacing:"0.2em", marginTop:10 }}>GEEN 3D MODEL</div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Subtle vignette */}
