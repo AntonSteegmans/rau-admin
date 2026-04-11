@@ -118,7 +118,9 @@ function buildScene(canvas, modelUrl) {
   fill.position.set(-8, 5, 2); fill.lookAt(0,0,0); scene.add(fill);
   const rim = new THREE.SpotLight(0xffffff, 3.5, 30, Math.PI/5, 0.4);
   rim.position.set(-2, 4, -8); rim.lookAt(0,0.5,0); scene.add(rim);
-  scene.add(Object.assign(new THREE.PointLight(0xffffff,2,30), { position: new THREE.Vector3(0,12,0) }));
+  const topLight = new THREE.PointLight(0xffffff, 2, 30);
+  topLight.position.set(0, 12, 0);
+  scene.add(topLight);
 
   // Load model
   const carGroup = new THREE.Group(); scene.add(carGroup);
