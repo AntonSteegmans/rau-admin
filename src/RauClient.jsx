@@ -264,7 +264,6 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
     const sectionTitle = { wagens:"MIJN WAGENS", services:"SERVICES", facturen:"FACTUREN", berichten:"BERICHTEN" }[nav];
     return (
       <div style={{ height:"100vh", background:C.bg, color:C.white, fontFamily:sans, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet"/>
         <style>{`::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08)}*{box-sizing:border-box} input::placeholder,textarea::placeholder{color:#3e3e3a}`}</style>
 
         {/* Section header */}

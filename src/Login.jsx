@@ -57,8 +57,6 @@ export default function Login() {
       display: "flex", alignItems: "center", justifyContent: "center",
       fontFamily: sans,
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet" />
-
       <form onSubmit={handleLogin} style={{
         width: "100%", maxWidth: 380, padding: "0 24px",
         display: "flex", flexDirection: "column", alignItems: "center", gap: 0,

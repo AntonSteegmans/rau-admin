@@ -1750,7 +1750,6 @@ export default function AdminDashboard({ user, onSignOut }) {
   // ── MAIN APP ──
   return (
     <div style={{ width: "100%", height: "100vh", background: C.bg, color: C.white, fontFamily: sans, overflow: "hidden", position: "relative", letterSpacing: "0.02em" }}>
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
