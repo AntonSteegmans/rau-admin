@@ -174,7 +174,6 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
   const [messages, setMessages]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [carIdx, setCarIdx]       = useState(0);
-  const [menuOpen, setMenuOpen]   = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [nav, setNav]             = useState("dashboard");
   const [composeOpen, setComposeOpen] = useState(false);
@@ -565,17 +564,6 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
           </div>
         </div>
 
-        {/* Hamburger — left center */}
-        <div onClick={()=>setMenuOpen(true)} style={{ position:"absolute", left:24, top:"50%", transform:"translateY(-50%)", zIndex:5, width:40,height:40,borderRadius:"50%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.2s" }}
-          onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.08)"}}
-          onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.04)"}}>
-          <svg width="14" height="12" viewBox="0 0 16 12" fill="none">
-            <line x1="0" y1="1" x2="16" y2="1" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5"/>
-            <line x1="0" y1="6" x2="16" y2="6" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5"/>
-            <line x1="0" y1="11" x2="16" y2="11" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5"/>
-          </svg>
-        </div>
-
         {/* Vehicle carousel dots */}
         {vehicles.length > 1 && (
           <div style={{ position:"absolute", bottom:28, left:"50%", transform:"translateX(-50%)", zIndex:5, display:"flex", gap:8, alignItems:"center" }}>
@@ -666,41 +654,6 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
         </div>
       </div>
 
-      {/* ─── SLIDE-IN MENU ─── */}
-      {menuOpen && (
-        <>
-          <div onClick={()=>setMenuOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:200,backdropFilter:"blur(4px)" }}/>
-          <nav style={{ position:"fixed",top:0,left:0,bottom:0,width:260,zIndex:210,background:"rgba(12,12,12,0.98)",borderRight:"1px solid rgba(255,255,255,0.06)",backdropFilter:"blur(20px)",display:"flex",flexDirection:"column" }}>
-            <div style={{ padding:"26px 22px 20px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <span style={{ fontFamily:serif, fontSize:20, color:C.white }}>raù</span>
-              <div onClick={()=>setMenuOpen(false)} style={{ cursor:"pointer",color:C.textMuted,fontSize:16,padding:4 }}>✕</div>
-            </div>
-            <div style={{ flex:1, padding:"12px 0" }}>
-              {[["◈","Overzicht","dashboard"],["⬡","Mijn Wagens","wagens"],["○","Services","services"],["□","Facturen","facturen"],["✉","Berichten","berichten"]].map(([icon,label,id])=>(
-                <div key={id} onClick={()=>{ setNav(id); setMenuOpen(false); }} style={{ display:"flex",alignItems:"center",gap:14,padding:"13px 22px",color:C.textMuted,fontSize:14,fontWeight:300,cursor:"pointer",transition:"all 0.2s" }}
-                  onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.03)";e.currentTarget.style.color=C.white}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=C.textMuted}}>
-                  <span style={{ opacity:0.4, fontSize:14, width:20, textAlign:"center" }}>{icon}</span>
-                  <span style={{ letterSpacing:"0.05em" }}>{label}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ padding:"16px 22px", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:14 }}>
-                <div style={{ width:34,height:34,borderRadius:"50%",background:C.goldSubtle,border:`1px solid ${C.goldDim}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:C.gold,fontFamily:mono,flexShrink:0 }}>
-                  {(client?.avatar||client?.name?.[0]||"?").toUpperCase()}
-                </div>
-                <div><div style={{ fontSize:12,color:C.text }}>{client?.name||user?.email}</div><div style={{ fontSize:10,color:C.textDark,marginTop:1 }}>{client?.tier?""+client.tier+" klant":"Klant"}</div></div>
-              </div>
-              <div onClick={onSignOut} style={{ padding:"8px 14px",fontSize:10,fontFamily:mono,letterSpacing:"0.15em",border:"1px solid rgba(255,255,255,0.07)",color:C.textMuted,borderRadius:6,cursor:"pointer",textAlign:"center",transition:"all 0.2s" }}
-                onMouseEnter={e=>{e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor="rgba(255,255,255,0.2)"}}
-                onMouseLeave={e=>{e.currentTarget.style.color=C.textMuted;e.currentTarget.style.borderColor="rgba(255,255,255,0.07)"}}>
-                UITLOGGEN
-              </div>
-            </div>
-          </nav>
-        </>
-      )}
     </div>
   );
 }
