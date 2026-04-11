@@ -10,7 +10,7 @@ const C = {
 const mono = "'JetBrains Mono', monospace";
 const sans = "'Outfit', sans-serif";
 
-export default function Login({ onLogin }) {
+export default function Login() {
   const [naam, setNaam] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ export default function Login({ onLogin }) {
 
     const email = naam.includes("@") ? naam.trim() : `${naam.trim()}@rau.be`;
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
+    const { error: authError } = await supabase.auth.signInWithPassword({
       email,
       password: wachtwoord,
     });
@@ -32,17 +32,9 @@ export default function Login({ onLogin }) {
     if (authError) {
       setError("Ongeldige inloggegevens. Probeer opnieuw.");
       setLoading(false);
-      return;
     }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, client_id")
-      .eq("id", data.user.id)
-      .single();
-
-    onLogin(data.user, profile?.role ?? "client", profile?.client_id ?? null);
-    setLoading(false);
+    // On success: onAuthStateChange in main.jsx fires SIGNED_IN,
+    // loads the profile and redirects automatically.
   };
 
   const inputStyle = {
