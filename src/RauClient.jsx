@@ -224,6 +224,11 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
   const activeService   = services.find(s => s.status === "in-progress" || s.status === "scheduled");
   const plannedServices = services.filter(s => s.status === "scheduled").slice(0, 3);
 
+  const totalValue    = vehicles.reduce((sum, v) => sum + (v.current_value ?? v.value ?? 0), 0);
+  const totalPurchase = vehicles.reduce((sum, v) => sum + (v.purchase_value ?? v.value ?? 0), 0);
+  const valueDelta    = totalValue - totalPurchase;
+  const valuePct      = totalPurchase ? ((valueDelta / totalPurchase) * 100) : 0;
+
   const sendMessage = async () => {
     if (!composeSubject.trim() || !composeBody.trim()) return;
     await supabase.from("messages").insert({ client_id: clientId, subject: composeSubject.trim(), body: composeBody.trim(), direction: "incoming", read: false });
@@ -300,6 +305,37 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                         ))}
                       </div>
                       {v.value > 0 && <div style={{ marginTop:14, paddingTop:12, borderTop:`1px solid rgba(255,255,255,0.06)`, fontSize:16, color:C.goldBright, fontFamily:mono, fontWeight:500 }}>{fmtVal(v.value)}</div>}
+                      {Array.isArray(v.value_history) && v.value_history.length > 1 && (() => {
+                        const vals = v.value_history.map(p => p.v);
+                        const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
+                        return (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontSize: 8, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>WAARDE-EVOLUTIE</div>
+                            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 36 }}>
+                              {v.value_history.map((p, i) => (
+                                <div key={i} title={`${p.d}: ${fmtVal(p.v)}`}
+                                  style={{ flex: 1, height: `${20 + ((p.v - min) / span) * 80}%`, background: i === v.value_history.length - 1 ? C.gold : C.goldDim, borderRadius: 2 }} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {v.condition_score != null && (
+                        <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", fontSize: 10, fontFamily: mono }}>
+                          <span style={{ color: C.textDark, letterSpacing: "0.2em" }}>CONDITIE</span>
+                          <span style={{ color: C.goldBright }}>{v.condition_score}/100</span>
+                        </div>
+                      )}
+                      {Array.isArray(v.documents) && (
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+                          <div style={{ fontSize: 8, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>DOCUMENTEN</div>
+                          {v.documents.map((d, i) => (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.text, padding: "2px 0" }}>
+                              <span>{d.type}</span><span style={{ color: C.textMuted, fontFamily: mono }}>{d.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -591,6 +627,18 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
             ))}
           </div>
         )}
+      </div>
+
+      {/* ─── COLLECTION VALUE ─── */}
+      <div style={{ flexShrink:0, padding:"0 10px 6px" }}>
+        <div style={{ background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 14, padding: "20px 22px", marginTop: 14 }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.25em", color: C.textMuted, fontFamily: mono }}>TOTALE COLLECTIEWAARDE</div>
+          <div style={{ fontSize: 30, fontFamily: serif, color: C.goldBright, marginTop: 6 }}>{fmtVal(totalValue)}</div>
+          <div style={{ fontSize: 11, fontFamily: mono, marginTop: 4, color: valueDelta >= 0 ? C.green : C.red }}>
+            {valueDelta >= 0 ? "▲" : "▼"} {fmtVal(Math.abs(valueDelta))} ({valuePct.toFixed(1).replace(".", ",")}%) sinds aankoop
+          </div>
+          <div style={{ fontSize: 9, color: C.textDark, marginTop: 8 }}>{vehicles.length} wagens in beheer</div>
+        </div>
       </div>
 
       {/* ─── BOTTOM PANELS ─── */}
