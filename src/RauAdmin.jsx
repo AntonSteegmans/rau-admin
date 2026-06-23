@@ -79,19 +79,19 @@ const clients = [
 ];
 
 const services = [
-  { id: "s001", vehicleId: "v002", clientId: "cl001", type: "Full Service", desc: "Annual inspection, oil & filter change, brake check", status: "in-progress", date: "2026-03-24", tech: "Kevin M.", priority: "normal", estimatedCost: 2200 },
-  { id: "s002", vehicleId: "v005", clientId: "cl003", type: "Pickup & Detailing", desc: "Pickup from client, full detailing, ceramic touch-up", status: "scheduled", date: "2026-03-28", tech: "Yannick D.", priority: "normal", estimatedCost: 890 },
-  { id: "s003", vehicleId: "v007", clientId: "cl004", type: "Tire Change", desc: "Switch to summer tires — Michelin Cup 2 set", status: "in-progress", date: "2026-03-25", tech: "Kevin M.", priority: "high", estimatedCost: 3200 },
-  { id: "s004", vehicleId: "v001", clientId: "cl001", type: "Full Service", desc: "6-month check, fluid top-up, diagnostic scan", status: "scheduled", date: "2026-04-15", tech: "Jonas V.", priority: "normal", estimatedCost: 1800 },
-  { id: "s005", vehicleId: "v003", clientId: "cl002", type: "Storage Prep", desc: "Battery tender, tire pressure, cover installation", status: "completed", date: "2026-03-20", tech: "Yannick D.", priority: "low", estimatedCost: 350 },
-  { id: "s006", vehicleId: "v004", clientId: "cl003", type: "Annual Inspection", desc: "Full Bugatti certified inspection — 2-day process", status: "scheduled", date: "2026-06-01", tech: "Kevin M.", priority: "high", estimatedCost: 8500 },
+  { id: "s001", vehicleId: "v002", clientId: "cl001", type: "Volledige beurt", desc: "Jaarlijkse keuring, olie- & filterwissel, remcontrole", status: "in-progress", date: "2026-03-24", tech: "Kevin M.", priority: "normal", estimatedCost: 2200 },
+  { id: "s002", vehicleId: "v005", clientId: "cl003", type: "Ophaling & detailing", desc: "Ophaling bij klant, volledige detailing, ceramic touch-up", status: "scheduled", date: "2026-03-28", tech: "Yannick D.", priority: "normal", estimatedCost: 890 },
+  { id: "s003", vehicleId: "v007", clientId: "cl004", type: "Bandenwissel", desc: "Omschakeling naar zomerbanden — Michelin Cup 2 set", status: "in-progress", date: "2026-03-25", tech: "Kevin M.", priority: "high", estimatedCost: 3200 },
+  { id: "s004", vehicleId: "v001", clientId: "cl001", type: "Volledige beurt", desc: "6-maandscontrole, vloeistofaanvulling, diagnostische scan", status: "scheduled", date: "2026-04-15", tech: "Jonas V.", priority: "normal", estimatedCost: 1800 },
+  { id: "s005", vehicleId: "v003", clientId: "cl002", type: "Stallingsvoorbereiding", desc: "Batterijlader, bandenspanning, afdekhoes installeren", status: "completed", date: "2026-03-20", tech: "Yannick D.", priority: "low", estimatedCost: 350 },
+  { id: "s006", vehicleId: "v004", clientId: "cl003", type: "Jaarlijkse keuring", desc: "Volledige Bugatti gecertificeerde inspectie — 2-daags proces", status: "scheduled", date: "2026-06-01", tech: "Kevin M.", priority: "high", estimatedCost: 8500 },
 ];
 
 const team = [
-  { id: "t001", name: "Kevin Martens", role: "Lead Technician", speciality: "Engine & Drivetrain", active: 2, avatar: "KM", status: "busy" },
-  { id: "t002", name: "Yannick De Wolf", role: "Detailing Specialist", speciality: "Paint Correction & Ceramic", active: 1, avatar: "YD", status: "busy" },
-  { id: "t003", name: "Jonas Vermeersch", role: "Technician", speciality: "Diagnostics & Electronics", active: 0, avatar: "JV", status: "available" },
-  { id: "t004", name: "Lisa Claes", role: "Client Relations", speciality: "Scheduling & Communications", active: 3, avatar: "LC", status: "busy" },
+  { id: "t001", name: "Kevin Martens", role: "Hoofdtechnicus", speciality: "Motor & aandrijflijn", active: 2, avatar: "KM", status: "busy" },
+  { id: "t002", name: "Yannick De Wolf", role: "Detailing-specialist", speciality: "Paint correction & ceramic", active: 1, avatar: "YD", status: "busy" },
+  { id: "t003", name: "Jonas Vermeersch", role: "Technicus", speciality: "Diagnose & elektronica", active: 0, avatar: "JV", status: "available" },
+  { id: "t004", name: "Lisa Claes", role: "Klantenrelaties", speciality: "Planning & communicatie", active: 3, avatar: "LC", status: "busy" },
 ];
 
 const messages = [
@@ -793,7 +793,7 @@ export default function AdminDashboard({ user, onSignOut }) {
       upsert: true,
       contentType: contentTypes[ext] || "application/octet-stream",
     });
-    if (uploadError) { flash("Upload fout: " + uploadError.message); setUploading(false); return; }
+    if (uploadError) { flash("Uploads zijn niet beschikbaar in de demo."); setUploading(false); return; }
 
     await supabase.from("models").update({ model_3d_path: filePath }).eq("id", modelId);
     flash(`3D model geüpload! (.${ext})`);
@@ -810,7 +810,7 @@ export default function AdminDashboard({ user, onSignOut }) {
     const filePath = `vehicle-images/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage.from("3d-models").upload(filePath, file, { upsert: true });
     setVehicleImageUploading(false);
-    if (error) { flash("Fout bij uploaden: " + error.message); return null; }
+    if (error) { flash("Uploads zijn niet beschikbaar in de demo."); return null; }
     return filePath;
   };
 
@@ -2078,7 +2078,7 @@ export default function AdminDashboard({ user, onSignOut }) {
           <div>
             <div style={{ fontSize: 9, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>TYPE SERVICE</div>
             <select style={{ width: "100%", padding: "10px 14px", background: C.surface, border: `1px solid ${C.panelBorder}`, borderRadius: 3, color: C.text, fontSize: 12, fontFamily: sans, outline: "none" }}>
-              <option>Full Service</option><option>Tire Change</option><option>Detailing</option><option>Pickup & Delivery</option><option>Storage Prep</option><option>Annual Inspection</option><option>Overig</option>
+              <option>Volledige beurt</option><option>Bandenwissel</option><option>Detailing</option><option>Ophaling & levering</option><option>Stallingsvoorbereiding</option><option>Jaarlijkse keuring</option><option>Overig</option>
             </select>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -2089,7 +2089,7 @@ export default function AdminDashboard({ user, onSignOut }) {
             <div>
               <div style={{ fontSize: 9, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>TECHNICUS</div>
               <select style={{ width: "100%", padding: "10px 14px", background: C.surface, border: `1px solid ${C.panelBorder}`, borderRadius: 3, color: C.text, fontSize: 12, fontFamily: sans, outline: "none" }}>
-                {dbTeam.filter(t => t.role !== "Client Relations").map(t => <option key={t.id}>{t.name}</option>)}
+                {dbTeam.filter(t => t.role !== "Klantenrelaties").map(t => <option key={t.id}>{t.name}</option>)}
               </select>
             </div>
           </div>
