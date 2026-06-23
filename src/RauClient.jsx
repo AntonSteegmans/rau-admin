@@ -543,17 +543,20 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
         {/* Afbeelding modus */}
         {displayMode === "image" ? (
-          imageUrl ? (
-            <img src={imageUrl} alt={`${brandName} ${modelName}`}
-              style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
-          ) : (
+          <>
+            {/* Placeholder ligt eronder; foto bedekt hem indien geladen, en valt hierop terug bij ontbrekend/kapot bestand */}
             <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
               <div style={{ textAlign:"center" }}>
                 <div style={{ fontSize:60, opacity:0.05 }}>◻</div>
                 <div style={{ fontSize:11, color:"rgba(255,255,255,0.12)", fontFamily:mono, letterSpacing:"0.2em", marginTop:10 }}>GEEN AFBEELDING</div>
               </div>
             </div>
-          )
+            {imageUrl && (
+              <img src={imageUrl} alt={`${brandName} ${modelName}`}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+            )}
+          </>
         ) : (
           <>
             {/* 3D canvas */}

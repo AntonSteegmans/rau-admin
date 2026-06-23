@@ -77,7 +77,7 @@ function veh(id, client_id, model_id, plate, color, mileage, next_service, purch
   return {
     id, client_id, model_id, plate, color, mileage, next_service,
     value: current_value, purchase_value, current_value, value_history, condition_score,
-    status, display_mode: "image", image_path: "",
+    status, display_mode: "image", image_path: `/cars/${id}.jpg`,
     documents: [
       { type: "Verzekeringspolis", status: "Actief", date: "2026-01-01" },
       { type: "Technische keuring", status: "Geldig", date: "2026-03-01" },
