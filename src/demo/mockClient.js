@@ -92,6 +92,7 @@ export function createMockClient() {
       from() {
         return {
           async upload() { return { data: null, error: { message: "Uploads zijn niet beschikbaar in de demo" } }; },
+          async remove() { return { data: null, error: null }; },
           getPublicUrl(path) { return { data: { publicUrl: path || "" } }; },
         };
       },

@@ -67,6 +67,12 @@ describe("mock client", () => {
     expect(error).toBeTruthy();
   });
 
+  it("storage remove is a no-op that resolves without error", async () => {
+    const supabase = await freshClient();
+    const { error } = await supabase.storage.from("3d-models").remove(["x.png"]);
+    expect(error).toBeNull();
+  });
+
   it("auth.onAuthStateChange fires a demo session", async () => {
     const supabase = await freshClient();
     const seen = [];
