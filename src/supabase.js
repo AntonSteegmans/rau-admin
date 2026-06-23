@@ -1,6 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+// DEMO-MODUS: geen echte database. De mock-client leeft op localStorage.
+// Terug naar echte Supabase? Herstel de inhoud van supabase.real.js hier.
+import { createMockClient } from "./demo/mockClient";
 
-const supabaseUrl = 'https://njfnzjwrwjpzthuqeyfn.supabase.co'
-const supabaseAnonKey = 'sb_publishable_4mIvFNM5nucskhDGvY9Z8g_SQx5yWPP'
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createMockClient();
