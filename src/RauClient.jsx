@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { supabase } from "./supabase";
 
 /* ═══════════════════════════════════════════
@@ -76,17 +77,21 @@ function buildScene(canvas, modelUrl) {
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.6;
+  renderer.toneMappingExposure = 0.92;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x080808);
 
-  // Camera — slightly back to make car feel smaller
-  const cam = new THREE.PerspectiveCamera(28, w / h, 0.1, 200);
-  cam.position.set(7.5, 2.6, 7.5);
-  cam.lookAt(0, 0.4, 0);
+  // Image-based lighting: geeft de lak realistische studio-reflecties (cruciaal voor donkere wagens).
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+  // Camera — closer hero framing
+  const cam = new THREE.PerspectiveCamera(30, w / h, 0.1, 200);
+  cam.position.set(4.9, 1.8, 4.9);
+  cam.lookAt(0, 0.6, 0);
 
   // Floor
   const floor = new THREE.Mesh(
@@ -127,17 +132,38 @@ function buildScene(canvas, modelUrl) {
   if (modelUrl) {
     const loader = new GLTFLoader();
     const draco = new DRACOLoader();
-    draco.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
+    draco.setDecoderPath("/draco/");
     loader.setDRACOLoader(draco);
     loader.load(modelUrl, (gltf) => {
       const model = gltf.scene;
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
-      model.scale.setScalar(6.5 / Math.max(size.x, size.y, size.z)); // slightly smaller
+      model.scale.setScalar(7.0 / Math.max(size.x, size.y, size.z)); // hero presence, past binnen het kader
       const sBox = new THREE.Box3().setFromObject(model);
       const c = sBox.getCenter(new THREE.Vector3());
       model.position.set(-c.x, -sBox.min.y, -c.z);
-      model.traverse(ch => { if (ch.isMesh) { ch.castShadow = true; ch.receiveShadow = true; } });
+      const isChiron = modelUrl && modelUrl.includes("v-chiron");
+      model.traverse(ch => { if (ch.isMesh) { ch.castShadow = true; ch.receiveShadow = true;
+        if (!isChiron) return;
+        const mats = Array.isArray(ch.material) ? ch.material : [ch.material];
+        mats.forEach(m => {
+          if (!m || !m.color) return;
+          const n = m.name || "";
+          // Chiron Super Sport "Bleu Royal Carbon": diep navy body, zilveren streep, donker carbon vleugel, zwarte uitlaten.
+          if (n === "Bugatti Chiron Carbon Body") { m.map = null; m.color.set("#0e1a33"); m.metalness = 0.45; m.roughness = 0.22; }
+          else if (n === "Bugatti Chiron Stripping Body") { m.map = null; m.color.set("#c6cace"); m.metalness = 0.85; m.roughness = 0.2; } // middenstreep -> zilver
+          else if (n === "Bugatti Chiron Titanium Exhaust" || n === "Bugatti Chiron Exhaust") { m.map = null; m.color.set("#141414"); m.metalness = 0.55; m.roughness = 0.5; } // uitlaten -> zwart
+          else if (n === "Bugatti Chiron Carbon Piston SPoiler" || n === "Bugatti Chiron Spoiler Base") { m.color.set("#16161a"); m.metalness = 0.3; m.roughness = 0.42; } // achtervleugel -> donker carbon
+          else if (n === "Bugatti Chiron Chasis") { m.map = null; m.color.set("#26282c"); m.metalness = 0.65; m.roughness = 0.34; } // C-lijn + ruit-omlijsting/cowl -> antraciet carbon-metallic
+          else if (n === "Bugatti Chiron Grill" || n === "Bugatti Chiron Radiator") { m.color.set("#0a0a0b"); m.metalness = 0.5; m.roughness = 0.55; } // grille-mesh -> donker
+          else if (n === "Bugatti Chiron Shroud") { m.map = null; m.color.set("#0a0a0b"); m.metalness = 0.4; m.roughness = 0.5; } // ruit-omlijsting / ruitenwisser-cowl -> zwart
+          else if (n === "Bugatti Chiron Grill Door") { m.map = null; m.color.set("#0a0a0b"); m.metalness = 0.5; m.roughness = 0.55; } // -> zwart
+          // Interieur -> cognac leer
+          else if (n === "Bugatti Chiron Interior Material" || n === "Bugatti Chiron Stripping Interior" || n === "Bugatti Chiron InteriorZone2" || n === "Bugatti Chiron InteriorZone2A") { m.map = null; m.color.set("#3a2210"); m.metalness = 0.05; m.roughness = 0.7; } // donker cognac / espresso
+          // "Badge" laten we native (originele Bugatti-embleem textuur) -> niet overschrijven
+          else if (n === "Bugatti Chiron Material") { m.color.set("#141416"); m.metalness = 0.3; m.roughness = 0.45; } // zij-luchtinlaat blades -> donker carbon
+        });
+      } });
       carGroup.add(model);
     });
   }
@@ -147,7 +173,7 @@ function buildScene(canvas, modelUrl) {
   controls.enableDamping = true; controls.dampingFactor = 0.08;
   controls.enablePan = false; controls.minDistance = 5; controls.maxDistance = 18;
   controls.minPolarAngle = 0.3; controls.maxPolarAngle = Math.PI / 2.1;
-  controls.target.set(0, 0.5, 0);
+  controls.target.set(0, 0.62, 0);
   controls.autoRotate = true; controls.autoRotateSpeed = 0.9;
 
   let af;
@@ -552,9 +578,18 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
               </div>
             </div>
             {imageUrl && (
-              <img src={imageUrl} alt={`${brandName} ${modelName}`}
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-                style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+              <>
+                <img src={imageUrl} alt={`${brandName} ${modelName}`}
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center",
+                    filter:"saturate(0.9) contrast(1.05) brightness(0.88)" }} />
+                {/* Cinematografische behandeling: verloop boven/onder + vignette unificeert de uiteenlopende
+                    bronfoto's, verbetert leesbaarheid en doezelt hoek-watermerken/achtergronden weg. */}
+                <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                  background:"linear-gradient(to bottom, rgba(8,8,8,0.6) 0%, rgba(8,8,8,0) 24%, rgba(8,8,8,0) 52%, rgba(8,8,8,0.92) 100%)" }} />
+                <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                  background:"radial-gradient(125% 95% at 50% 42%, rgba(8,8,8,0) 52%, rgba(8,8,8,0.78) 100%)" }} />
+              </>
             )}
           </>
         ) : (

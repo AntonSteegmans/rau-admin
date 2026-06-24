@@ -13,7 +13,7 @@ export const seedData = {
     { id: "m-amggt",   brand_id: "b-amg", name: "AMG GT Roadster",               year: 2024, model_3d_path: null },
     { id: "m-rr",      brand_id: "b-rr",  name: "Autobiography LWB",             year: 2024, model_3d_path: null },
     { id: "m-defocta", brand_id: "b-lr",  name: "Defender OCTA V8",              year: 2024, model_3d_path: null },
-    { id: "m-chiron",  brand_id: "b-bug", name: "Chiron Super Sport",            year: 2022, model_3d_path: null },
+    { id: "m-chiron",  brand_id: "b-bug", name: "Chiron Super Sport",            year: 2022, model_3d_path: "/models/v-chiron.glb" },
     { id: "m-conti",   brand_id: "b-ben", name: "Continental GT Speed",          year: 2023, model_3d_path: null },
   ],
   clients: [
@@ -30,7 +30,7 @@ export const seedData = {
   ],
   vehicles: [
     veh("v-chiron", "c-maarten", "m-chiron", "1-BUG-001", "Bleu Royal Carbon", "1.240 km", "2026-09-01",
-        3650000, 3950000, "garaged", [{ d: "2022-01", v: 3650000 }, { d: "2024-01", v: 3800000 }, { d: "2026-06", v: 3950000 }], 99),
+        3650000, 3950000, "garaged", [{ d: "2022-01", v: 3650000 }, { d: "2024-01", v: 3800000 }, { d: "2026-06", v: 3950000 }], 99, "3d"),
     veh("v-gt3rs", "c-maarten", "m-gt3rs", "1-RS-911", "Arctic Grey", "3.480 km", "2026-07-15",
         290000, 335000, "garaged", [{ d: "2023-06", v: 290000 }, { d: "2024-06", v: 312000 }, { d: "2026-06", v: 335000 }], 98),
     veh("v-conti", "c-maarten", "m-conti", "1-BEN-007", "Beluga Black", "9.120 km", "2026-08-10",
@@ -73,11 +73,11 @@ export const seedData = {
 };
 
 // Helper voor vehicles incl. nieuwe asset-velden.
-function veh(id, client_id, model_id, plate, color, mileage, next_service, purchase_value, current_value, status, value_history, condition_score) {
+function veh(id, client_id, model_id, plate, color, mileage, next_service, purchase_value, current_value, status, value_history, condition_score, display_mode = "image") {
   return {
     id, client_id, model_id, plate, color, mileage, next_service,
     value: current_value, purchase_value, current_value, value_history, condition_score,
-    status, display_mode: "image", image_path: `/cars/${id}.jpg`,
+    status, display_mode, image_path: `/cars/${id}.jpg`,
     documents: [
       { type: "Verzekeringspolis", status: "Actief", date: "2026-01-01" },
       { type: "Technische keuring", status: "Geldig", date: "2026-03-01" },
