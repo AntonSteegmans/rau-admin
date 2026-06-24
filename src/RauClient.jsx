@@ -96,7 +96,7 @@ function buildScene(canvas, modelUrl) {
   // Floor
   const floor = new THREE.Mesh(
     new THREE.CircleGeometry(14, 64),
-    new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.15, metalness: 0.95 })
+    new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.62, metalness: 0.2 })
   );
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
