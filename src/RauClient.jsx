@@ -535,7 +535,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
             // ── SVG chart geometry ──
             const PAD = { top: 28, right: 18, bottom: 36, left: 18 };
-            const VW = 360; const VH = 200; // viewBox units
+            const VW = 880; const VH = 170; // viewBox units — breed & laag voor een compacte grafiek
             const chartW = VW - PAD.left - PAD.right;
             const chartH = VH - PAD.top - PAD.bottom;
             const seriesVals = series.map(p => p.v);
@@ -567,7 +567,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
               (b.current_value ?? b.value ?? 0) - (a.current_value ?? a.value ?? 0));
 
             return (
-              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:14, maxWidth:880, margin:"0 auto", width:"100%" }}>
 
                 {/* ── KERNCIJFERS ── */}
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
