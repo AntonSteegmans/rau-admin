@@ -210,6 +210,8 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
   const [invoiceFilter, setInvoiceFilter] = useState("all");
   const [selectedService, setSelectedService] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [dossierId, setDossierId] = useState(null);
+  const [dossierToast, setDossierToast] = useState(null);
   const canvasRef  = useRef(null);
   const cleanupRef = useRef(null);
 
@@ -285,6 +287,32 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
     loadAll();
   };
 
+  const requestService = async (vehicle, kind) => {
+    const vBrand = vehicle.models?.brands?.name || "";
+    const vModel = vehicle.models?.name || "";
+    const carLabel = `${vBrand} ${vModel}`.trim() || "uw voertuig";
+    const configs = {
+      ophaling:    { type: "Ophaling & transport",  description: `Ophaling en transport van de ${carLabel}. Onze chauffeur haalt uw wagen op op het afgesproken adres en brengt hem veilig naar onze faciliteiten.`, subject: "Ophaling ingepland", body: `Uw aanvraag voor de ophaling van de ${carLabel} is ontvangen en ingepland op 5 juli 2026. Onze chauffeur Lisa Claes neemt contact met u op voor de bevestiging van het tijdstip.`, cost: 450 },
+      waardering:  { type: "Taxatie & waardering",  description: `Professionele taxatie en marktwaardebepaling van de ${carLabel} door onze erkende experts.`, subject: "Waardering aangevraagd", body: `Uw aanvraag voor een professionele taxatie van de ${carLabel} is bevestigd. Expert Lisa Claes voert de waardering uit op 5 juli 2026 en bezorgt u een volledig rapport.`, cost: 0 },
+      detailing:   { type: "Detailing & onderhoud", description: `Volledig detailingprogramma voor de ${carLabel}: exterieur polish, interieur reiniging en beschermende coating.`, subject: "Detailing geboekt", body: `Uw detailingafspraak voor de ${carLabel} is bevestigd op 5 juli 2026. Technicus Lisa Claes zorgt voor een volledig behandelingsprogramma. Geschatte kostprijs: € 1.200.`, cost: 1200 },
+    };
+    const cfg = configs[kind];
+    if (!cfg) return;
+    await supabase.from("services").insert({
+      vehicle_id: vehicle.id, client_id: clientId,
+      type: cfg.type, description: cfg.description,
+      status: "scheduled", date: "2026-07-05",
+      technician: "Lisa Claes", priority: "normal", estimated_cost: cfg.cost,
+    });
+    await supabase.from("messages").insert({
+      client_id: clientId, subject: cfg.subject, body: cfg.body,
+      direction: "outgoing", read: false, created_at: new Date().toISOString(),
+    });
+    await loadAll();
+    setDossierToast("Aanvraag verstuurd ✓");
+    setTimeout(() => setDossierToast(null), 3000);
+  };
+
   /* ─── shared sub-styles ─── */
   const inputSt = { width:"100%", padding:"10px 14px", background:C.surface, border:`1px solid rgba(255,255,255,0.08)`, borderRadius:6, color:C.white, fontSize:12, fontFamily:sans, outline:"none" };
 
@@ -316,7 +344,8 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
   /* ═══ SECTION VIEWS (non-dashboard) ═══ */
   if (nav !== "dashboard") {
-    const sectionTitle = { wagens:"MIJN WAGENS", services:"SERVICES", facturen:"FACTUREN", berichten:"BERICHTEN", portfolio:"PORTFOLIO" }[nav];
+    const sectionTitle = { wagens:"MIJN WAGENS", services:"SERVICES", facturen:"FACTUREN", berichten:"BERICHTEN", portfolio:"PORTFOLIO", voertuig:"VOERTUIG DOSSIER" }[nav];
+    const backNav = nav === "voertuig" ? "wagens" : "dashboard";
     return (
       <div style={{ height:"100vh", background:C.bg, color:C.white, fontFamily:sans, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <style>{`::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08)}*{box-sizing:border-box} input::placeholder,textarea::placeholder{color:#3e3e3a}`}</style>
@@ -324,7 +353,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
         {/* Section header */}
         <div style={{ height:56, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", borderBottom:`1px solid rgba(255,255,255,0.05)` }}>
           <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-            <div onClick={()=>setNav("dashboard")} style={{ width:32,height:32,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.textMuted,fontSize:16 }}>‹</div>
+            <div onClick={()=>setNav(backNav)} style={{ width:32,height:32,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.textMuted,fontSize:16 }}>‹</div>
             <span style={{ fontFamily:serif, fontSize:18, color:C.white }}>raù</span>
             <span style={{ fontSize:10, letterSpacing:"0.25em", color:C.textMuted }}>{sectionTitle}</span>
           </div>
@@ -338,7 +367,10 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
               {vehicles.map(v => {
                 const vBrand = v.models?.brands?.name || "—"; const vModel = v.models?.name || "—";
                 return (
-                  <div key={v.id} style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, overflow:"hidden" }}>
+                  <div key={v.id} style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, overflow:"hidden", cursor:"pointer" }}
+                    onClick={()=>{ setDossierId(v.id); setNav("voertuig"); }}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor=C.goldDim}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor=C.panelBorder}>
                     <div style={{ height:3, background:`linear-gradient(90deg, ${C.gold}, ${C.goldDim})` }} />
                     <div style={{ padding:"20px 22px" }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
@@ -385,6 +417,10 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                           ))}
                         </div>
                       )}
+                      {/* ── DOSSIER LINK ── */}
+                      <div style={{ marginTop:14, paddingTop:12, borderTop:`1px solid rgba(255,255,255,0.06)`, display:"flex", justifyContent:"flex-end" }}>
+                        <span style={{ fontSize:10, fontFamily:mono, letterSpacing:"0.15em", color:C.gold, opacity:0.8 }}>Bekijk dossier ›</span>
+                      </div>
                       {/* ── AI-WAARDERING ── */}
                       {(() => {
                         const val = valuations[v.id];
@@ -449,6 +485,256 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
               })}
             </div>
           )}
+
+          {/* ── VOERTUIG DOSSIER ── */}
+          {nav === "voertuig" && (() => {
+            const v = vehicles.find(x => x.id === dossierId) || vehicles[0];
+            if (!v) return <p style={{ color:C.textMuted }}>Voertuig niet gevonden</p>;
+            const vBrand = v.models?.brands?.name || "—";
+            const vModel = v.models?.name || "—";
+            const vServices = services.filter(s => s.vehicle_id === v.id).sort((a,b) => b.date?.localeCompare(a.date || "") || 0);
+            const val = valuations[v.id];
+            const trendPct = v.purchase_value && v.current_value ? ((v.current_value - v.purchase_value) / v.purchase_value) * 100 : null;
+
+            // SVG chart for this vehicle's value_history
+            const vhist = Array.isArray(v.value_history) && v.value_history.length > 1 ? v.value_history : null;
+            let chartSvg = null;
+            if (vhist) {
+              const PAD = { top:24, right:16, bottom:28, left:16 };
+              const VW=800, VH=140;
+              const cW=VW-PAD.left-PAD.right, cH=VH-PAD.top-PAD.bottom;
+              const vals=vhist.map(p=>p.v), minV=Math.min(...vals), maxV=Math.max(...vals), span=maxV-minV||1;
+              const xOf=i=>PAD.left+(i/(vhist.length-1))*cW;
+              const yOf=v2=>PAD.top+cH-((v2-minV)/span)*cH;
+              const lineD=vhist.map((p,i)=>`${i===0?"M":"L"} ${xOf(i)},${yOf(p.v)}`).join(" ");
+              const areaD=`M ${xOf(0)},${PAD.top+cH} ${vhist.map((p,i)=>`L ${xOf(i)},${yOf(p.v)}`).join(" ")} L ${xOf(vhist.length-1)},${PAD.top+cH} Z`;
+              const maxIdx=vals.indexOf(maxV); const lastV=vals[vals.length-1]; const startV=vals[0];
+              const pct=startV?((lastV-startV)/startV)*100:0;
+              chartSvg = (
+                <div style={{ background:C.surface, borderRadius:10, padding:"16px 14px 10px" }}>
+                  <div style={{ fontSize:8, letterSpacing:"0.22em", color:C.textDark, fontFamily:mono, marginBottom:10 }}>WAARDE-EVOLUTIE</div>
+                  <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMid meet" width="100%" style={{ display:"block", overflow:"visible" }}>
+                    <defs>
+                      <linearGradient id="vArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={C.gold} stopOpacity="0.25"/>
+                        <stop offset="100%" stopColor={C.gold} stopOpacity="0.02"/>
+                      </linearGradient>
+                    </defs>
+                    <line x1={PAD.left} y1={PAD.top+cH} x2={PAD.left+cW} y2={PAD.top+cH} stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+                    <path d={areaD} fill="url(#vArea)"/>
+                    <path d={lineD} fill="none" stroke={C.gold} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+                    <circle cx={xOf(maxIdx)} cy={yOf(maxV)} r="3" fill={C.goldBright}/>
+                    <text x={xOf(maxIdx)} y={yOf(maxV)-7} textAnchor="middle" fill={C.goldBright} fontSize="8" fontFamily={mono}>{fmtVal(maxV)}</text>
+                    <circle cx={xOf(vhist.length-1)} cy={yOf(lastV)} r="3.5" fill={C.goldBright}/>
+                    <text x={PAD.left} y={PAD.top+cH+14} textAnchor="start" fill={C.textDark} fontSize="7" fontFamily={mono}>{vhist[0].d}</text>
+                    <text x={PAD.left+cW} y={PAD.top+cH+14} textAnchor="end" fill={C.textDark} fontSize="7" fontFamily={mono}>{vhist[vhist.length-1].d}</text>
+                  </svg>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:6, paddingTop:8, borderTop:`1px solid rgba(255,255,255,0.05)` }}>
+                    <div style={{ fontSize:20, fontFamily:serif, color:C.goldBright }}>{fmtVal(v.current_value ?? v.value)}</div>
+                    {trendPct != null && (
+                      <div style={{ fontSize:11, fontFamily:mono, color: trendPct>=0?C.green:C.red }}>
+                        {trendPct>=0?"▲":"▼"} {Math.abs(trendPct).toFixed(1).replace(".",",")}% vs aankoop
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            // Image / placeholder for dossier header
+            const dossierImgUrl = v.image_path ? supabase.storage.from("3d-models").getPublicUrl(v.image_path).data.publicUrl : null;
+
+            return (
+              <div style={{ maxWidth:880, margin:"0 auto", width:"100%", display:"flex", flexDirection:"column", gap:14 }}>
+
+                {/* ── HEADER BLOCK ── */}
+                <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, overflow:"hidden" }}>
+                  {/* Photo or placeholder */}
+                  <div style={{ height:200, position:"relative", background:C.surface, overflow:"hidden" }}>
+                    {dossierImgUrl ? (
+                      <>
+                        <img src={dossierImgUrl} alt={`${vBrand} ${vModel}`}
+                          onError={e=>{e.currentTarget.style.display="none"}}
+                          style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", filter:"saturate(0.85) brightness(0.8)" }}/>
+                        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, rgba(8,8,8,0.3) 0%, rgba(8,8,8,0.6) 100%)", pointerEvents:"none" }}/>
+                      </>
+                    ) : (
+                      <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <div style={{ textAlign:"center" }}>
+                          <div style={{ fontSize:52, opacity:0.05 }}>⬡</div>
+                          <div style={{ fontSize:10, color:"rgba(255,255,255,0.1)", fontFamily:mono, letterSpacing:"0.22em", marginTop:8 }}>GEEN AFBEELDING</div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Overlay info */}
+                    <div style={{ position:"absolute", bottom:18, left:22, zIndex:5 }}>
+                      <div style={{ fontSize:9, letterSpacing:"0.28em", color:"rgba(255,255,255,0.4)", fontFamily:mono }}>{vBrand.toUpperCase()}</div>
+                      <div style={{ fontSize:28, fontFamily:serif, color:C.white, lineHeight:1.1, marginTop:2 }}>{vModel}</div>
+                    </div>
+                    <div style={{ position:"absolute", bottom:22, right:22, zIndex:5 }}>
+                      <StatusBadge status={v.status}/>
+                    </div>
+                  </div>
+                  {/* Specs grid */}
+                  <div style={{ padding:"18px 22px" }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px,1fr))", gap:10 }}>
+                      {[
+                        ["NUMMERPLAAT", v.plate||"—"],
+                        ["KLEUR", v.color||"—"],
+                        ["KILOMETERSTAND", v.mileage||"—"],
+                        ["VOLGENDE SERVICE", v.next_service||"—"],
+                        ["CONDITIE", v.condition_score!=null?`${v.condition_score}/100`:"—"],
+                        ["AANKOOPWAARDE", fmtVal(v.purchase_value)||"—"],
+                      ].map(([l,val],i)=>(
+                        <div key={i} style={{ padding:"10px 12px", background:C.surface, borderRadius:8 }}>
+                          <div style={{ fontSize:7, letterSpacing:"0.2em", color:C.textDark, marginBottom:4 }}>{l}</div>
+                          <div style={{ fontSize:11, color:C.text, fontFamily:mono }}>{val}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── WAARDE-EVOLUTIE ── */}
+                {chartSvg}
+
+                {/* ── AI-WAARDERING ── */}
+                {val && (() => {
+                  const impactDot = (impact) => {
+                    const col = impact==="positief"?C.green:impact==="negatief"?C.red:C.textDark;
+                    return <span style={{ display:"inline-block",width:6,height:6,borderRadius:"50%",background:col,flexShrink:0,marginTop:2 }}/>;
+                  };
+                  const sourceLabel = val.source==="claude"?"Claude":val.source==="offline-fallback"?"AI-simulatie (terugval)":"AI-simulatie";
+                  const trendColor  = val.trendPct>=0?C.green:C.red;
+                  const trendArrow  = val.trendPct>=0?"▲":"▼";
+                  return (
+                    <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"18px 22px" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                        <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono }}>AI-WAARDERING</div>
+                        <span style={{ fontSize:8, fontFamily:mono, letterSpacing:"0.12em", padding:"2px 8px", borderRadius:3,
+                          background:val.source==="claude"?C.goldSubtle:"rgba(255,255,255,0.04)",
+                          color:val.source==="claude"?C.gold:C.textDark,
+                          border:`1px solid ${val.source==="claude"?C.goldDim:"rgba(255,255,255,0.06)"}` }}>
+                          {sourceLabel.toUpperCase()}
+                        </span>
+                      </div>
+                      <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:6 }}>
+                        <span style={{ fontSize:24, fontFamily:serif, color:C.goldBright }}>{fmtVal(val.estimatedValue)}</span>
+                        <span style={{ fontSize:12, fontFamily:mono, color:trendColor }}>{trendArrow} {Math.abs(val.trendPct).toFixed(1).replace(".",",")}%</span>
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                        <div style={{ flex:1, height:3, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                          <div style={{ height:"100%", width:`${val.confidence}%`, background:`${C.gold}80`, borderRadius:2 }}/>
+                        </div>
+                        <span style={{ fontSize:9, fontFamily:mono, color:C.textMuted, whiteSpace:"nowrap" }}>{val.confidence}% betrouwbaar</span>
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:10 }}>
+                        {val.factors.map((f,i)=>(
+                          <div key={i} style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
+                            {impactDot(f.impact)}
+                            <span style={{ fontSize:9, color:C.textMuted, lineHeight:1.4 }}>
+                              <span style={{ color:C.text, fontFamily:mono }}>{f.label}</span>{" — "}{f.detail}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize:10, color:C.textDark, lineHeight:1.6, fontStyle:"italic" }}>{val.narrative}</div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── SERVICE TIMELINE ── */}
+                <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"18px 22px" }}>
+                  <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:16 }}>SERVICE-HISTORIEK &amp; OPVOLGING</div>
+                  {vServices.length === 0 ? (
+                    <p style={{ fontSize:12, color:C.textDark }}>Geen services gevonden voor dit voertuig.</p>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+                      {vServices.map((s, i) => {
+                        const { day, month } = nlMonth(s.date);
+                        const isLast = i === vServices.length - 1;
+                        return (
+                          <div key={s.id} style={{ display:"flex", gap:16, position:"relative" }}>
+                            {/* Timeline line */}
+                            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, width:32 }}>
+                              <div style={{ width:10, height:10, borderRadius:"50%", border:`2px solid ${C.gold}`, background:s.status==="completed"?C.gold:C.bg, marginTop:2, flexShrink:0, zIndex:1 }}/>
+                              {!isLast && <div style={{ width:1, flex:1, background:"rgba(255,255,255,0.08)", minHeight:20, marginTop:2 }}/>}
+                            </div>
+                            {/* Content */}
+                            <div style={{ paddingBottom: isLast?0:18, flex:1 }}>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                                <div>
+                                  <div style={{ fontSize:13, color:C.white }}>{s.type}</div>
+                                  <div style={{ fontSize:9, fontFamily:mono, color:C.textDark, marginTop:2 }}>{day} {month} {s.date?.slice(0,4)}</div>
+                                </div>
+                                <StatusBadge status={s.status}/>
+                              </div>
+                              {s.description && <div style={{ fontSize:11, color:C.textMuted, lineHeight:1.5, marginBottom:4 }}>{s.description}</div>}
+                              <div style={{ display:"flex", gap:12, fontSize:9, fontFamily:mono, color:C.textDark }}>
+                                {s.technician && <span>{s.technician}</span>}
+                                {s.estimated_cost > 0 && <span style={{ color:C.gold }}>€{Number(s.estimated_cost).toLocaleString()}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── DOCUMENTEN ── */}
+                {Array.isArray(v.documents) && v.documents.length > 0 && (
+                  <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"18px 22px" }}>
+                    <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:12 }}>DOCUMENTEN</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      {v.documents.map((d,i) => (
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:C.surface, borderRadius:8 }}>
+                          <span style={{ fontSize:12, color:C.text }}>{d.type}</span>
+                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                            <span style={{ fontSize:9, fontFamily:mono, color:C.textDark }}>{d.date||""}</span>
+                            <span style={{ fontSize:9, fontFamily:mono, padding:"2px 8px", borderRadius:3,
+                              background:d.status==="geldig"||d.status==="OK"?C.greenBg:C.goldSubtle,
+                              color:d.status==="geldig"||d.status==="OK"?C.green:C.gold,
+                              border:`1px solid ${d.status==="geldig"||d.status==="OK"?C.greenBorder:C.goldDim}` }}>
+                              {d.status?.toUpperCase()||"—"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── CONCIERGE ACTIES ── */}
+                <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"18px 22px" }}>
+                  <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:16 }}>CONCIERGE ACTIES</div>
+                  {dossierToast && (
+                    <div style={{ marginBottom:14, padding:"10px 16px", background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:8, fontSize:11, fontFamily:mono, color:C.green, letterSpacing:"0.12em" }}>
+                      {dossierToast}
+                    </div>
+                  )}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px,1fr))", gap:10 }}>
+                    {[
+                      { kind:"ophaling",  label:"Plan ophaling",       icon:"🚗", desc:"Ophaling & transport" },
+                      { kind:"waardering",label:"Vraag waardering aan", icon:"📋", desc:"Taxatie & waardering" },
+                      { kind:"detailing", label:"Boek detailing",       icon:"✨", desc:"Detailing & onderhoud" },
+                    ].map(({ kind, label, icon, desc }) => (
+                      <button key={kind} onClick={()=>requestService(v, kind)}
+                        style={{ padding:"16px 18px", background:C.surface, border:`1px solid rgba(255,255,255,0.08)`, borderRadius:10,
+                          color:C.text, cursor:"pointer", textAlign:"left", transition:"all 0.2s" }}
+                        onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.goldDim; e.currentTarget.style.background=C.goldSubtle; }}
+                        onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; e.currentTarget.style.background=C.surface; }}>
+                        <div style={{ fontSize:18, marginBottom:8 }}>{icon}</div>
+                        <div style={{ fontSize:11, fontFamily:mono, letterSpacing:"0.12em", color:C.gold, marginBottom:4 }}>{label.toUpperCase()}</div>
+                        <div style={{ fontSize:10, color:C.textMuted }}>{desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            );
+          })()}
 
           {/* ── SERVICES ── */}
           {nav === "services" && (
