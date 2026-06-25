@@ -1062,7 +1062,7 @@ export default function AdminDashboard({ user, onSignOut }) {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#0a0a0a", overflowY: "auto" }}>
 
       {/* ─── KPI STRIP ─── */}
-      <div style={{ flexShrink: 0, padding: isMobile ? "16px 16px 0" : "20px 28px 0", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 10 : 14 }}>
+      <div style={{ flexShrink: 0, padding: isMobile ? "16px 16px 0" : "56px 28px 0", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 10 : 14 }}>
         {[
           { label: "ACTIEVE KLANTEN", value: activeClients, color: C.green },
           { label: "MAANDELIJKSE OMZET", value: `€ ${monthlyRevenue.toLocaleString("nl-BE")}`, color: C.gold },
