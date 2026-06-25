@@ -5,6 +5,8 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { supabase } from "./supabase";
+import { estimateValuation } from "./demo/valuation.js";
+import { aiValuation, isLiveEnabled } from "./demo/aiValuation.js";
 
 /* ═══════════════════════════════════════════
    TOKENS
@@ -211,7 +213,28 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
   const canvasRef  = useRef(null);
   const cleanupRef = useRef(null);
 
+  // AI-waarderingen: map van vehicle.id → schatting object
+  const [valuations, setValuations] = useState({});
+
   useEffect(() => { if (clientId) loadAll(); else setLoading(false); }, [clientId]);
+
+  // Laad AI-waarderingen zodra voertuigen beschikbaar zijn.
+  // Synchrone offline schatting is onmiddellijk; async live vervangt nadien.
+  useEffect(() => {
+    if (vehicles.length === 0) return;
+    // Onmiddellijk: offline schattingen voor alle wagens
+    const offline = {};
+    vehicles.forEach(v => { offline[v.id] = estimateValuation(v); });
+    setValuations(offline);
+    // Async: live Claude indien ingeschakeld (per wagen onafhankelijk)
+    if (isLiveEnabled()) {
+      vehicles.forEach(v => {
+        aiValuation(v).then(result => {
+          setValuations(prev => ({ ...prev, [v.id]: result }));
+        }).catch(() => {}); // fout al afgehandeld in aiValuation
+      });
+    }
+  }, [vehicles]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -362,6 +385,64 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                           ))}
                         </div>
                       )}
+                      {/* ── AI-WAARDERING ── */}
+                      {(() => {
+                        const val = valuations[v.id];
+                        if (!val) return null;
+                        const impactDot = (impact) => {
+                          const col = impact === "positief" ? C.green : impact === "negatief" ? C.red : C.textDark;
+                          return <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background:col, flexShrink:0, marginTop:2 }} />;
+                        };
+                        const sourceLabel = val.source === "claude" ? "Claude" : val.source === "offline-fallback" ? "AI-simulatie (terugval)" : "AI-simulatie";
+                        const trendColor  = val.trendPct >= 0 ? C.green : C.red;
+                        const trendArrow  = val.trendPct >= 0 ? "▲" : "▼";
+                        return (
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+                            {/* Koptekst */}
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                              <div style={{ fontSize:8, letterSpacing:"0.2em", color:C.textDark }}>AI-WAARDERING</div>
+                              <span style={{ fontSize:8, fontFamily:mono, letterSpacing:"0.12em", padding:"1px 6px", borderRadius:3,
+                                background: val.source === "claude" ? C.goldSubtle : "rgba(255,255,255,0.04)",
+                                color: val.source === "claude" ? C.gold : C.textDark,
+                                border: `1px solid ${val.source === "claude" ? C.goldDim : "rgba(255,255,255,0.06)"}` }}>
+                                {sourceLabel.toUpperCase()}
+                              </span>
+                            </div>
+                            {/* Geschatte waarde + trend */}
+                            <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:4 }}>
+                              <span style={{ fontSize:18, fontFamily:mono, fontWeight:500, color:C.goldBright }}>{fmtVal(val.estimatedValue)}</span>
+                              <span style={{ fontSize:11, fontFamily:mono, color:trendColor }}>
+                                {trendArrow} {Math.abs(val.trendPct).toFixed(1).replace(".",",")}%
+                              </span>
+                            </div>
+                            {/* Betrouwbaarheid */}
+                            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
+                              <div style={{ flex:1, height:3, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                                <div style={{ height:"100%", width:`${val.confidence}%`, background:`${C.gold}80`, borderRadius:2 }} />
+                              </div>
+                              <span style={{ fontSize:9, fontFamily:mono, color:C.textMuted, whiteSpace:"nowrap" }}>
+                                {val.confidence}% betrouwbaar
+                              </span>
+                            </div>
+                            {/* Factoren */}
+                            <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:8 }}>
+                              {val.factors.map((f, i) => (
+                                <div key={i} style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
+                                  {impactDot(f.impact)}
+                                  <span style={{ fontSize:9, color:C.textMuted, lineHeight:1.4 }}>
+                                    <span style={{ color:C.text, fontFamily:mono }}>{f.label}</span>
+                                    {" — "}{f.detail}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            {/* Narratief */}
+                            <div style={{ fontSize:10, color:C.textDark, lineHeight:1.5, fontStyle:"italic" }}>
+                              {val.narrative}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
