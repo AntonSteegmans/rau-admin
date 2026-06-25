@@ -118,15 +118,76 @@ const revenueData = [
   { m: "Jan", rev: 29600 }, { m: "Feb", rev: 33100 }, { m: "Mar", rev: 38200 },
 ];
 
+/* SVG nav icons — 18×18, stroke currentColor, fill none */
+const NavIcons = {
+  dashboard: (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+      <rect x="10" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+      <rect x="1" y="10" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+      <rect x="10" y="10" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+    </svg>
+  ),
+  clients: (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8.5" cy="5.5" r="2.8" stroke="currentColor" strokeWidth="1.4"/>
+      <path d="M2 14.5c0-3.59 2.91-6.5 6.5-6.5s6.5 2.91 6.5 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  ),
+  fleet: (
+    <svg width="17" height="17" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M1 9h18M4.5 9l2-5h7l2 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="5" cy="11.5" r="1.8" stroke="currentColor" strokeWidth="1.4"/>
+      <circle cx="15" cy="11.5" r="1.8" stroke="currentColor" strokeWidth="1.4"/>
+    </svg>
+  ),
+  services: (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10.5 2.5a4.5 4.5 0 0 1-1 7.5L4 15.5l-2.5-2.5L7 7.5a4.5 4.5 0 0 1 3.5-5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="4.5" cy="12.5" r="0.5" fill="currentColor"/>
+    </svg>
+  ),
+  invoices: (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2.5" y="1.5" width="12" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+      <line x1="5.5" y1="5.5" x2="11.5" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="5.5" y1="8.5" x2="11.5" y2="8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="5.5" y1="11.5" x2="9" y2="11.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  ),
+  messages: (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.5" y="3.5" width="14" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+      <path d="M1.5 5.5l7 5 7-5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  team: (
+    <svg width="17" height="17" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="9" cy="3.5" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
+      <path d="M3 13c0-3.31 2.69-6 6-6s6 2.69 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <circle cx="2.5" cy="4.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M0.5 12c0-2.48 1.35-4.5 3-4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <circle cx="15.5" cy="4.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M17.5 12c0-2.48-1.35-4.5-3-4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  ),
+  settings: (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8.5" cy="8.5" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
+      <path d="M8.5 1v2M8.5 14v2M1 8.5h2M14 8.5h2M3.1 3.1l1.4 1.4M12.5 12.5l1.4 1.4M3.1 13.9l1.4-1.4M12.5 4.5l1.4-1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  ),
+};
+
 const navItems = [
-  { id: "dashboard", icon: "◈", label: "Dashboard" },
-  { id: "clients", icon: "◇", label: "Klanten" },
-  { id: "fleet", icon: "⬡", label: "Fleet" },
-  { id: "services", icon: "○", label: "Services" },
-  { id: "invoices", icon: "□", label: "Facturatie" },
-  { id: "messages", icon: "✉", label: "Berichten" },
-  { id: "team", icon: "△", label: "Team" },
-  { id: "settings", icon: "⚙", label: "Instellingen" },
+  { id: "dashboard", label: "Dashboard" },
+  { id: "clients", label: "Klanten" },
+  { id: "fleet", label: "Fleet" },
+  { id: "services", label: "Services" },
+  { id: "invoices", label: "Facturatie" },
+  { id: "messages", label: "Berichten" },
+  { id: "team", label: "Team" },
+  { id: "settings", label: "Instellingen" },
 ];
 
 /* ═══════════════════════════════════════════
@@ -537,10 +598,14 @@ const ChartTip = ({ active, payload }) => {
    MAIN APP
    ═══════════════════════════════════════════ */
 export default function AdminDashboard({ user, onSignOut }) {
-  // Mobile detection
+  // Mobile / desktop detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 900);
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
+    const onResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsDesktop(window.innerWidth >= 900);
+    };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -971,10 +1036,17 @@ export default function AdminDashboard({ user, onSignOut }) {
     const vehicle = allVehicles[dashCarIdx % allVehicles.length];
     if (vehicle) localStorage.removeItem(`rau_color_${vehicle.id}`);
   };
-  const activeClients = dbClients.filter(c => c.status === "active").length;
-  const monthlyRevenue = dbClients.filter(c => c.status === "active").reduce((s, c) => s + (c.monthly_fee ?? 0), 0);
-  const pendingServices = dbServices.filter(s => s.status !== "completed").length;
-  const unreadMessages = dbMessages.filter(m => !m.read).length;
+  // KPI metrics — DB-first, fall back to mock data when DB is empty (demo mode)
+  const useMockClients = dbClients.length === 0;
+  const useMockServices = dbServices.length === 0;
+  const useMockMessages = dbMessages.length === 0;
+  const kpiClients = useMockClients ? clients : dbClients;
+  const kpiServices = useMockServices ? services : dbServices;
+  const kpiMessages = useMockMessages ? messages : dbMessages;
+  const activeClients = kpiClients.filter(c => c.status === "active").length;
+  const monthlyRevenue = kpiClients.filter(c => c.status === "active").reduce((s, c) => s + (c.monthly_fee ?? c.monthlyFee ?? 0), 0);
+  const pendingServices = kpiServices.filter(s => s.status !== "completed").length;
+  const unreadMessages = kpiMessages.filter(m => !m.read).length;
   const sw = 0; // Full width — sidebar is overlay-only
 
   const getVehicle = (vid) => allVehicles.find(v => v.id === vid);
@@ -987,9 +1059,29 @@ export default function AdminDashboard({ user, onSignOut }) {
   const dashDisplayName = dashLinkedModel ? `${dashBrand?.name || ""} ${dashLinkedModel.name}` : `${dashVehicle?.make || ""} ${dashVehicle?.name || ""}`;
 
   const renderDashboard = () => (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#0a0a0a" }}>
-      {/* ─── 3D HERO — full-bleed ─── */}
-      <div style={{ flex: "1 1 68%", position: "relative", minHeight: isMobile ? 280 : 400 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#0a0a0a", overflowY: "auto" }}>
+
+      {/* ─── KPI STRIP ─── */}
+      <div style={{ flexShrink: 0, padding: isMobile ? "16px 16px 0" : "20px 28px 0", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 10 : 14 }}>
+        {[
+          { label: "ACTIEVE KLANTEN", value: activeClients, color: C.green },
+          { label: "MAANDELIJKSE OMZET", value: `€ ${monthlyRevenue.toLocaleString("nl-BE")}`, color: C.gold },
+          { label: "OPENSTAANDE SERVICES", value: pendingServices, color: C.blue },
+          { label: "ONGELEZEN BERICHTEN", value: unreadMessages, color: unreadMessages > 0 ? C.red : C.textMuted },
+        ].map((kpi, i) => (
+          <div key={i} style={{
+            background: C.panel, border: `1px solid ${C.panelBorder}`,
+            borderRadius: 6, padding: isMobile ? "14px 16px" : "16px 20px",
+          }}>
+            <div style={{ fontSize: 8, fontFamily: mono, letterSpacing: "0.22em", color: C.textDark, marginBottom: 8, textTransform: "uppercase" }}>{kpi.label}</div>
+            <div style={{ fontSize: isMobile ? 22 : 28, fontFamily: "'Cormorant Garamond', serif", fontWeight: 500, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ─── 3D HERO — contained panel ─── */}
+      <div style={{ flexShrink: 0, padding: isMobile ? "12px 16px 0" : "16px 28px 0" }}>
+        <div style={{ position: "relative", height: isMobile ? 260 : 340, maxHeight: 380, border: `1px solid ${C.panelBorder}`, borderRadius: 8, overflow: "hidden", background: "#0a0a0a" }}>
         <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
 
         {/* Vignette overlay */}
@@ -1016,23 +1108,25 @@ export default function AdminDashboard({ user, onSignOut }) {
         {/* ── Top bar overlay ── */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, padding: isMobile ? "20px 20px" : "28px 36px",
           display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          {/* Left: hamburger + logo */}
+          {/* Left: hamburger (mobile/tablet only) + logo */}
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 16 : 24 }}>
-            {/* Hamburger */}
-            <div onClick={() => setMobileMenuOpen(true)} style={{
-              width: 40, height: 40, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
-              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-              transition: "all 0.2s", background: "rgba(255,255,255,0.02)",
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
-            >
-              <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                <line x1="0" y1="1" x2="16" y2="1" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
-                <line x1="0" y1="6" x2="16" y2="6" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
-                <line x1="0" y1="11" x2="16" y2="11" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
-              </svg>
-            </div>
+            {/* Hamburger — hidden on desktop (persistent sidebar) */}
+            {!isDesktop && (
+              <div onClick={() => setMobileMenuOpen(true)} style={{
+                width: 40, height: 40, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
+                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                transition: "all 0.2s", background: "rgba(255,255,255,0.02)",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+              >
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                  <line x1="0" y1="1" x2="16" y2="1" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+                  <line x1="0" y1="6" x2="16" y2="6" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+                  <line x1="0" y1="11" x2="16" y2="11" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+                </svg>
+              </div>
+            )}
             {/* Logo */}
             <span style={{ fontSize: isMobile ? 20 : 26, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.06em" }}>raù</span>
           </div>
@@ -1116,10 +1210,11 @@ export default function AdminDashboard({ user, onSignOut }) {
           </div>
         </div>
 
-      </div>
+        </div>{/* end contained hero panel */}
+      </div>{/* end hero padding wrapper */}
 
       {/* ─── BOTTOM INFO CARDS ─── */}
-      <div style={{ flex: "0 0 auto", padding: isMobile ? "0 16px 20px" : "0 36px 28px", background: "transparent", marginTop: -60, position: "relative", zIndex: 15 }}>
+      <div style={{ flex: "0 0 auto", padding: isMobile ? "12px 16px 20px" : "16px 28px 28px", background: "transparent" }}>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 12 : 16 }}>
 
           {/* INFO card */}
@@ -1743,73 +1838,123 @@ export default function AdminDashboard({ user, onSignOut }) {
         select{appearance:auto}
       `}</style>
 
-      {/* Overlay when menu open */}
-      {mobileMenuOpen && (
+      {/* Overlay when mobile menu open */}
+      {mobileMenuOpen && !isDesktop && (
         <div onClick={() => setMobileMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 115, backdropFilter: "blur(4px)" }} />
       )}
 
-      {/* Slide-over menu — all screen sizes */}
-      <nav style={{
-        position: "fixed", top: 0, left: 0, bottom: 0, width: 280, zIndex: 120,
-        background: "rgba(14,14,14,0.97)", borderRight: "1px solid rgba(255,255,255,0.05)",
-        backdropFilter: "blur(20px)",
-        transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
-        transform: mobileMenuOpen ? "translateX(0)" : "translateX(-100%)",
-        display: "flex", flexDirection: "column",
-      }}>
-        {/* Menu header */}
-        <div style={{ padding: "28px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 22, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.05em" }}>raù</span>
-          <div onClick={() => setMobileMenuOpen(false)} style={{ cursor: "pointer", color: C.textMuted, fontSize: 18, padding: 4 }}>✕</div>
-        </div>
-
-        {/* Nav items */}
-        <div style={{ flex: 1, padding: "16px 0", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
-          {navItems.map(it => {
-            const a = nav === it.id;
-            const hasNotif = it.id === "messages" && unreadMessages > 0;
-            return (
-              <div key={it.id} onClick={() => { setNav(it.id); setSearch(""); setMobileMenuOpen(false); }} style={{
-                display: "flex", alignItems: "center", gap: 14, padding: "13px 24px",
-                color: a ? C.white : C.textMuted, fontSize: 14, fontWeight: a ? 400 : 300,
-                cursor: "pointer", transition: "all 0.2s",
-                background: a ? "rgba(255,255,255,0.04)" : "transparent",
-                borderLeft: a ? `2px solid ${C.accent}` : "2px solid transparent",
-              }}
-                onMouseEnter={e => { if (!a) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
-                onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? "rgba(255,255,255,0.04)" : "transparent"; }}>
-                <span style={{ fontSize: 15, width: 22, textAlign: "center", flexShrink: 0, opacity: 0.5 }}>{it.icon}</span>
-                <span style={{ letterSpacing: "0.08em", flex: 1 }}>{it.label}</span>
-                {hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "2px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* User + uitloggen */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono, flexShrink: 0 }}>
-              {(user?.email?.[0] || "A").toUpperCase()}
-            </div>
-            <div style={{ overflow: "hidden" }}>
-              <div style={{ fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email || "Admin"}</div>
-              <div style={{ fontSize: 10, color: C.textDark }}>Beheerder</div>
-            </div>
+      {/* Desktop — persistent static sidebar */}
+      {isDesktop && (
+        <nav style={{
+          position: "fixed", top: 0, left: 0, bottom: 0, width: 220, zIndex: 50,
+          background: "rgba(12,12,12,0.98)", borderRight: `1px solid ${C.panelBorder}`,
+          display: "flex", flexDirection: "column",
+        }}>
+          <div style={{ padding: "24px 24px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <span style={{ fontSize: 22, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.05em" }}>raù</span>
           </div>
-          <div onClick={onSignOut} style={{
-            padding: "7px 14px", fontSize: 10, fontFamily: mono, letterSpacing: "0.15em",
-            border: "1px solid rgba(255,255,255,0.06)", color: C.textMuted,
-            borderRadius: 4, cursor: "pointer", textAlign: "center", transition: "all 0.2s",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.color = C.white; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}
-          >UITLOGGEN</div>
-        </div>
-      </nav>
+          <div style={{ flex: 1, padding: "16px 0", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
+            {navItems.map(it => {
+              const a = nav === it.id;
+              const hasNotif = it.id === "messages" && unreadMessages > 0;
+              return (
+                <div key={it.id} onClick={() => { setNav(it.id); setSearch(""); }} style={{
+                  display: "flex", alignItems: "center", gap: 14, padding: "13px 24px",
+                  color: a ? C.white : C.textMuted, fontSize: 14, fontWeight: a ? 400 : 300,
+                  cursor: "pointer", transition: "all 0.2s",
+                  background: a ? "rgba(255,255,255,0.04)" : "transparent",
+                  borderLeft: a ? `2px solid ${C.accent}` : "2px solid transparent",
+                }}
+                  onMouseEnter={e => { if (!a) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+                  onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? "rgba(255,255,255,0.04)" : "transparent"; }}>
+                  <span style={{ width: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: a ? C.gold : "rgba(255,255,255,0.35)", transition: "color 0.2s" }}>{NavIcons[it.id]}</span>
+                  <span style={{ letterSpacing: "0.08em", flex: 1 }}>{it.label}</span>
+                  {hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "2px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono, flexShrink: 0 }}>
+                {(user?.email?.[0] || "A").toUpperCase()}
+              </div>
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email || "Admin"}</div>
+                <div style={{ fontSize: 10, color: C.textDark }}>Beheerder</div>
+              </div>
+            </div>
+            <div onClick={onSignOut} style={{
+              padding: "7px 14px", fontSize: 10, fontFamily: mono, letterSpacing: "0.15em",
+              border: "1px solid rgba(255,255,255,0.06)", color: C.textMuted,
+              borderRadius: 4, cursor: "pointer", textAlign: "center", transition: "all 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.color = C.white; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}
+            >UITLOGGEN</div>
+          </div>
+        </nav>
+      )}
 
-      {/* Main — full width */}
-      <main style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* Mobile/tablet — slide-over nav */}
+      {!isDesktop && (
+        <nav style={{
+          position: "fixed", top: 0, left: 0, bottom: 0, width: 280, zIndex: 120,
+          background: "rgba(14,14,14,0.97)", borderRight: "1px solid rgba(255,255,255,0.05)",
+          backdropFilter: "blur(20px)",
+          transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
+          transform: mobileMenuOpen ? "translateX(0)" : "translateX(-100%)",
+          display: "flex", flexDirection: "column",
+        }}>
+          <div style={{ padding: "28px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 22, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.05em" }}>raù</span>
+            <div onClick={() => setMobileMenuOpen(false)} style={{ cursor: "pointer", color: C.textMuted, fontSize: 18, padding: 4 }}>✕</div>
+          </div>
+          <div style={{ flex: 1, padding: "16px 0", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
+            {navItems.map(it => {
+              const a = nav === it.id;
+              const hasNotif = it.id === "messages" && unreadMessages > 0;
+              return (
+                <div key={it.id} onClick={() => { setNav(it.id); setSearch(""); setMobileMenuOpen(false); }} style={{
+                  display: "flex", alignItems: "center", gap: 14, padding: "13px 24px",
+                  color: a ? C.white : C.textMuted, fontSize: 14, fontWeight: a ? 400 : 300,
+                  cursor: "pointer", transition: "all 0.2s",
+                  background: a ? "rgba(255,255,255,0.04)" : "transparent",
+                  borderLeft: a ? `2px solid ${C.accent}` : "2px solid transparent",
+                }}
+                  onMouseEnter={e => { if (!a) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+                  onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? "rgba(255,255,255,0.04)" : "transparent"; }}>
+                  <span style={{ width: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: a ? C.gold : "rgba(255,255,255,0.35)", transition: "color 0.2s" }}>{NavIcons[it.id]}</span>
+                  <span style={{ letterSpacing: "0.08em", flex: 1 }}>{it.label}</span>
+                  {hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "2px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono, flexShrink: 0 }}>
+                {(user?.email?.[0] || "A").toUpperCase()}
+              </div>
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email || "Admin"}</div>
+                <div style={{ fontSize: 10, color: C.textDark }}>Beheerder</div>
+              </div>
+            </div>
+            <div onClick={onSignOut} style={{
+              padding: "7px 14px", fontSize: 10, fontFamily: mono, letterSpacing: "0.15em",
+              border: "1px solid rgba(255,255,255,0.06)", color: C.textMuted,
+              borderRadius: 4, cursor: "pointer", textAlign: "center", transition: "all 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.color = C.white; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}
+            >UITLOGGEN</div>
+          </div>
+        </nav>
+      )}
+
+      {/* Main — offset by sidebar on desktop */}
+      <main style={{ marginLeft: isDesktop ? 220 : 0, height: "100vh", display: "flex", flexDirection: "column" }}>
         {/* Header bar for non-dashboard pages */}
         {nav !== "dashboard" && (
           <div style={{
@@ -1817,19 +1962,22 @@ export default function AdminDashboard({ user, onSignOut }) {
             padding: "0 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: C.bg,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div onClick={() => setMobileMenuOpen(true)} style={{
-                width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)",
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s",
-              }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
-              >
-                <svg width="14" height="10" viewBox="0 0 16 12" fill="none">
-                  <line x1="0" y1="1" x2="16" y2="1" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
-                  <line x1="0" y1="6" x2="16" y2="6" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
-                  <line x1="0" y1="11" x2="16" y2="11" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
-                </svg>
-              </div>
+              {/* Hamburger — only on mobile/tablet */}
+              {!isDesktop && (
+                <div onClick={() => setMobileMenuOpen(true)} style={{
+                  width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)",
+                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s",
+                }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+                >
+                  <svg width="14" height="10" viewBox="0 0 16 12" fill="none">
+                    <line x1="0" y1="1" x2="16" y2="1" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
+                    <line x1="0" y1="6" x2="16" y2="6" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
+                    <line x1="0" y1="11" x2="16" y2="11" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
+                  </svg>
+                </div>
+              )}
               <span style={{ fontSize: 18, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white }}>raù</span>
               <span style={{ fontSize: 10, letterSpacing: "0.25em", color: C.textMuted, marginLeft: 8 }}>
                 {navItems.find(n => n.id === nav)?.label.toUpperCase()}
