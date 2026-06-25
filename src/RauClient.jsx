@@ -348,7 +348,129 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
     const backNav = nav === "voertuig" ? "wagens" : "dashboard";
     return (
       <div style={{ height:"100vh", background:C.bg, color:C.white, fontFamily:sans, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        <style>{`::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08)}*{box-sizing:border-box} input::placeholder,textarea::placeholder{color:#3e3e3a}`}</style>
+        <style>{`::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08)}*{box-sizing:border-box} input::placeholder,textarea::placeholder{color:#3e3e3a} @media screen{.rau-print-report{display:none!important}} @media print{body *{visibility:hidden!important} .rau-print-report,.rau-print-report *{visibility:visible!important} .rau-print-report{position:absolute;left:0;top:0;width:100%;display:block!important} @page{margin:18mm}}`}</style>
+
+        {/* ─── PRINT-ONLY COLLECTIERAPPORT ─── */}
+        {(() => {
+          const mVehicles = vehicles;
+          const sumCurrent  = mVehicles.reduce((s, v) => s + (v.current_value ?? v.value ?? 0), 0);
+          const sumPurchase = mVehicles.reduce((s, v) => s + (v.purchase_value ?? 0), 0);
+          const meerwaarde  = sumCurrent - sumPurchase;
+          const meerPct     = sumPurchase ? (meerwaarde / sumPurchase) * 100 : 0;
+          const totalInvoices = invoices.reduce((s, i) => s + (i.amount ?? 0), 0);
+          const totalServCost = services.reduce((s, sv) => s + (sv.estimated_cost ?? 0), 0);
+          const totalCosts    = totalInvoices + totalServCost;
+          const sortedVeh     = [...mVehicles].sort((a, b) =>
+            (b.current_value ?? b.value ?? 0) - (a.current_value ?? a.value ?? 0));
+          const totalAiEst    = sortedVeh.reduce((s, v) => {
+            const val = valuations[v.id];
+            return s + (val?.estimatedValue ?? v.current_value ?? v.value ?? 0);
+          }, 0);
+
+          const P = { // print palette — light background
+            gold: "#8a7d4a", text: "#111", sub: "#444", muted: "#666", rule: "#ddd", bg: "#fff", row: "#f9f7f3",
+          };
+          const cell = (content, right, bold, color) => (
+            <td style={{ padding:"7px 10px", borderBottom:`1px solid ${P.rule}`, fontSize:11,
+              fontFamily:"'Georgia', serif", textAlign: right ? "right" : "left",
+              fontWeight: bold ? 600 : 400, color: color || P.text, whiteSpace:"nowrap" }}>
+              {content ?? "—"}
+            </td>
+          );
+
+          return (
+            <div className="rau-print-report" style={{ background:P.bg, color:P.text, fontFamily:"'Georgia', serif", padding:"0 0 40px" }}>
+
+              {/* ── HEADER ── */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", borderBottom:`2px solid ${P.gold}`, paddingBottom:14, marginBottom:28 }}>
+                <div>
+                  <div style={{ fontSize:34, fontFamily:"'Georgia', serif", fontWeight:400, color:P.gold, letterSpacing:"0.04em", lineHeight:1 }}>RAÚ</div>
+                  <div style={{ fontSize:11, letterSpacing:"0.28em", color:P.muted, marginTop:4, textTransform:"uppercase" }}>Collectierapport</div>
+                </div>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontSize:16, fontWeight:600, color:P.text }}>{client?.name ?? "Maarten"}</div>
+                  <div style={{ fontSize:10, color:P.muted, marginTop:3 }}>Opgesteld: juni 2026</div>
+                </div>
+              </div>
+
+              {/* ── SAMENVATTING ── */}
+              <div style={{ marginBottom:32 }}>
+                <div style={{ fontSize:9, letterSpacing:"0.28em", color:P.muted, textTransform:"uppercase", marginBottom:12, fontFamily:"'Arial', sans-serif" }}>Samenvatting</div>
+                <table style={{ width:"100%", borderCollapse:"collapse", background:P.bg }}>
+                  <tbody>
+                    {[
+                      ["Totale collectiewaarde",      fmtVal(sumCurrent),                             P.gold,  true],
+                      ["Geïnvesteerd",                 fmtVal(sumPurchase),                             P.text,  false],
+                      ["Ongerealiseerde meerwaarde",   `${meerwaarde >= 0 ? "+" : ""}${fmtVal(Math.abs(meerwaarde))}  (${meerwaarde >= 0 ? "+" : ""}${meerPct.toFixed(1).replace(".",",")}%)`, meerwaarde >= 0 ? "#2a7a2a" : "#b03030", false],
+                      ["Totale kosten",                fmtVal(totalCosts),                             P.text,  false],
+                      ["Aantal wagens",                String(mVehicles.length),                       P.text,  false],
+                    ].map(([label, value, color, bold], i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? P.row : P.bg }}>
+                        <td style={{ padding:"8px 10px", fontSize:11, color:P.sub, borderBottom:`1px solid ${P.rule}`, width:"60%" }}>{label}</td>
+                        <td style={{ padding:"8px 10px", fontSize:13, fontWeight: bold ? 700 : 500, color, textAlign:"right", borderBottom:`1px solid ${P.rule}` }}>{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── PER-WAGEN TABEL ── */}
+              <div style={{ marginBottom:28 }}>
+                <div style={{ fontSize:9, letterSpacing:"0.28em", color:P.muted, textTransform:"uppercase", marginBottom:12, fontFamily:"'Arial', sans-serif" }}>Collectiedetail per voertuig</div>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
+                  <thead>
+                    <tr style={{ background:P.gold }}>
+                      {["Wagen","Nummerplaat","Km","Conditie","Aankoopwaarde","Huidige waarde","Trend","AI-schatting"].map((h, i) => (
+                        <th key={i} style={{ padding:"8px 10px", textAlign: i >= 4 ? "right" : "left", fontSize:9,
+                          letterSpacing:"0.18em", textTransform:"uppercase", color:"#fff",
+                          fontFamily:"'Arial', sans-serif", fontWeight:600, whiteSpace:"nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedVeh.map((v, i) => {
+                      const brand    = v.models?.brands?.name ?? "—";
+                      const model    = v.models?.name ?? "—";
+                      const cv       = v.current_value ?? v.value ?? 0;
+                      const pv       = v.purchase_value ?? 0;
+                      const trendPct = pv ? ((cv - pv) / pv) * 100 : null;
+                      const aiEst    = valuations[v.id]?.estimatedValue ?? null;
+                      return (
+                        <tr key={v.id} style={{ background: i % 2 === 0 ? P.row : P.bg }}>
+                          {cell(`${brand} ${model}`)}
+                          {cell(v.plate ?? "—")}
+                          {cell(v.mileage ?? "—")}
+                          {cell(v.condition_score != null ? `${v.condition_score}/100` : "—")}
+                          {cell(fmtVal(pv) ?? "—", true)}
+                          {cell(fmtVal(cv) ?? "—", true, false, P.gold)}
+                          {cell(trendPct != null ? `${trendPct >= 0 ? "+" : ""}${trendPct.toFixed(1).replace(".",",")}%` : "—", true, false, trendPct != null ? (trendPct >= 0 ? "#2a7a2a" : "#b03030") : P.muted)}
+                          {cell(aiEst ? fmtVal(aiEst) : "—", true)}
+                        </tr>
+                      );
+                    })}
+                    {/* Totals row */}
+                    <tr style={{ background:"#f0ece0", borderTop:`2px solid ${P.gold}` }}>
+                      <td colSpan={4} style={{ padding:"9px 10px", fontSize:11, fontWeight:700, color:P.text, letterSpacing:"0.1em", fontFamily:"'Arial', sans-serif" }}>TOTAAL</td>
+                      {cell(fmtVal(sumPurchase), true, true)}
+                      {cell(fmtVal(sumCurrent), true, true, P.gold)}
+                      {cell(
+                        `${meerwaarde >= 0 ? "+" : ""}${meerPct.toFixed(1).replace(".",",")}%`,
+                        true, true, meerwaarde >= 0 ? "#2a7a2a" : "#b03030"
+                      )}
+                      {cell(fmtVal(totalAiEst), true, true)}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── FOOTER ── */}
+              <div style={{ borderTop:`1px solid ${P.rule}`, paddingTop:14, fontSize:9, color:P.muted, lineHeight:1.6, fontFamily:"'Arial', sans-serif" }}>
+                Waarden zijn indicatief en gebaseerd op historische data en marktparameters. AI-schattingen zijn algoritmisch gegenereerd en vormen geen officiële taxatie. © RAÚ — Confidentieel document, uitsluitend bestemd voor de geadresseerde.
+              </div>
+
+            </div>
+          );
+        })()}
 
         {/* Section header */}
         <div style={{ height:56, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", borderBottom:`1px solid rgba(255,255,255,0.05)` }}>
@@ -854,6 +976,18 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
             return (
               <div style={{ display:"flex", flexDirection:"column", gap:14, maxWidth:880, margin:"0 auto", width:"100%" }}>
+
+                {/* ── EXPORT BUTTON ── */}
+                <div style={{ display:"flex", justifyContent:"flex-end" }}>
+                  <button
+                    onClick={() => window.print()}
+                    style={{ padding:"9px 18px", fontSize:10, fontFamily:mono, fontWeight:500, letterSpacing:"0.12em",
+                      border:`1px solid ${C.gold}60`, background:C.goldSubtle, color:C.gold,
+                      borderRadius:6, cursor:"pointer", transition:"all 0.2s" }}
+                    onMouseEnter={e=>{ e.currentTarget.style.opacity="0.75"; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.opacity="1"; }}
+                  >EXPORTEER RAPPORT</button>
+                </div>
 
                 {/* ── KERNCIJFERS ── */}
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
