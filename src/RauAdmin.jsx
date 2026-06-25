@@ -1063,7 +1063,7 @@ export default function AdminDashboard({ user, onSignOut }) {
         {/* Welcome text — below top bar */}
         <div style={{ position: "absolute", top: isMobile ? 80 : 90, left: isMobile ? 20 : 36, zIndex: 10 }}>
           <div style={{ fontSize: isMobile ? 24 : 36, color: C.white, fontWeight: 300, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
-            Welkom terug, Anton
+            Welkom terug, Maarten
           </div>
         </div>
 
@@ -1116,40 +1116,6 @@ export default function AdminDashboard({ user, onSignOut }) {
           </div>
         </div>
 
-        {/* Color swatches — floating right side */}
-        {!no3DModel && (
-          <div style={{
-            position: "absolute", right: isMobile ? 16 : 36, bottom: isMobile ? 75 : 75, zIndex: 12,
-            display: "flex", gap: 5, alignItems: "center",
-          }}>
-            {[
-              { name: "Rosso", hex: "#cc2020" },
-              { name: "Nero", hex: "#1a1a1a" },
-              { name: "Bianco", hex: "#e8e6e0" },
-              { name: "Grigio", hex: "#8a8a8a" },
-              { name: "Blu", hex: "#1e3a6a" },
-              { name: "Verde", hex: "#1a4a2a" },
-              { name: "Giallo", hex: "#e8c820" },
-              { name: "Arancio", hex: "#d4682a" },
-            ].map(c => (
-              <div key={c.hex} onClick={() => changeBodyColor(c.hex)} title={c.name} style={{
-                width: 20, height: 20, borderRadius: "50%", cursor: "pointer", background: c.hex,
-                border: `2px solid ${selectedBodyColor === c.hex ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.12)"}`,
-                transition: "all 0.2s",
-              }}
-                onMouseEnter={e => e.currentTarget.style.transform = "scale(1.25)"}
-                onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-              />
-            ))}
-            {selectedBodyColor && (
-              <div onClick={resetColor} title="Reset" style={{
-                width: 20, height: 20, borderRadius: "50%", cursor: "pointer",
-                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "rgba(255,255,255,0.4)",
-              }}>↺</div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ─── BOTTOM INFO CARDS ─── */}

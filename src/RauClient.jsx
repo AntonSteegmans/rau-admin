@@ -174,7 +174,7 @@ function buildScene(canvas, modelUrl) {
   controls.enablePan = false; controls.minDistance = 5; controls.maxDistance = 18;
   controls.minPolarAngle = 0.3; controls.maxPolarAngle = Math.PI / 2.1;
   controls.target.set(0, 0.62, 0);
-  controls.autoRotate = true; controls.autoRotateSpeed = 0.9;
+  controls.autoRotate = true; controls.autoRotateSpeed = 0.35;
 
   let af;
   const animate = () => { af = requestAnimationFrame(animate); controls.update(); renderer.render(scene, cam); };
@@ -307,7 +307,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
           </div>
         </div>
 
-        <div style={{ flex:1, overflowY:"auto", padding: 24 }}>
+        <div style={{ flex:1, overflowY:"auto", padding: 24, paddingBottom: 80 }}>
           {/* ── WAGENS ── */}
           {nav === "wagens" && (
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px,1fr))", gap:14 }}>
@@ -497,6 +497,18 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
             </div>
           </div>
         </Modal>
+        {/* ─── BOTTOM TAB BAR ─── */}
+        <div style={{ position:"fixed", bottom:0, left:0, right:0, height:56, background:"rgba(8,8,8,0.92)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"stretch", zIndex:100 }}>
+          {[["Overzicht","dashboard"],["Wagens","wagens"],["Services","services"],["Berichten","berichten"]].map(([label,id])=>{
+            const active = id === "dashboard" ? nav === "dashboard" : nav === id;
+            return (
+              <div key={id} onClick={()=>setNav(id)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", gap:2, transition:"opacity 0.15s" }}
+                onMouseEnter={e=>e.currentTarget.style.opacity="0.75"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                <span style={{ fontSize:9, letterSpacing:"0.18em", fontFamily:mono, color: active ? "#a0b27e" : "#6a6a64", fontWeight: active ? 500 : 400 }}>{label.toUpperCase()}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -565,7 +577,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
       </header>
 
       {/* ─── HERO ─── */}
-      <div style={{ flex:1, position:"relative", overflow:"hidden", minHeight:0 }}>
+      <div style={{ height:"52vh", maxHeight:460, position:"relative", overflow:"hidden", flexShrink:0 }}>
 
         {/* Afbeelding modus */}
         {displayMode === "image" ? (
@@ -680,7 +692,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
       </div>
 
       {/* ─── BOTTOM PANELS ─── */}
-      <div style={{ height:200, flexShrink:0, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, padding:"8px 10px 10px" }}>
+      <div style={{ height:200, flexShrink:0, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, padding:"8px 10px 66px" }}>
 
         {/* INFO */}
         <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:12, padding:"18px 22px", display:"flex", flexDirection:"column", gap:10, overflow:"hidden" }}>
@@ -757,6 +769,19 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
             })
           )}
         </div>
+      </div>
+
+      {/* ─── BOTTOM TAB BAR ─── */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, height:56, background:"rgba(8,8,8,0.92)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"stretch", zIndex:100 }}>
+        {[["Overzicht","dashboard"],["Wagens","wagens"],["Services","services"],["Berichten","berichten"]].map(([label,id])=>{
+          const active = id === "dashboard" ? nav === "dashboard" : nav === id;
+          return (
+            <div key={id} onClick={()=>setNav(id)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", gap:2, transition:"opacity 0.15s" }}
+              onMouseEnter={e=>e.currentTarget.style.opacity="0.75"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+              <span style={{ fontSize:9, letterSpacing:"0.18em", fontFamily:mono, color: active ? "#a0b27e" : "#6a6a64", fontWeight: active ? 500 : 400 }}>{label.toUpperCase()}</span>
+            </div>
+          );
+        })}
       </div>
 
     </div>
