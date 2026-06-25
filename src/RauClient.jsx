@@ -316,7 +316,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
   /* ═══ SECTION VIEWS (non-dashboard) ═══ */
   if (nav !== "dashboard") {
-    const sectionTitle = { wagens:"MIJN WAGENS", services:"SERVICES", facturen:"FACTUREN", berichten:"BERICHTEN" }[nav];
+    const sectionTitle = { wagens:"MIJN WAGENS", services:"SERVICES", facturen:"FACTUREN", berichten:"BERICHTEN", portfolio:"PORTFOLIO" }[nav];
     return (
       <div style={{ height:"100vh", background:C.bg, color:C.white, fontFamily:sans, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <style>{`::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08)}*{box-sizing:border-box} input::placeholder,textarea::placeholder{color:#3e3e3a}`}</style>
@@ -504,6 +504,191 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                     </div>
                   ))}
                 </div>
+              </div>
+            );
+          })()}
+
+          {/* ── PORTFOLIO ── */}
+          {nav === "portfolio" && (() => {
+            // ── aggregates ──
+            const mVehicles = vehicles.filter(v => v.client_id === clientId || true); // already filtered on load
+            const sumCurrent  = mVehicles.reduce((s, v) => s + (v.current_value ?? v.value ?? 0), 0);
+            const sumPurchase = mVehicles.reduce((s, v) => s + (v.purchase_value ?? 0), 0);
+            const meerwaarde  = sumCurrent - sumPurchase;
+            const meerPct     = sumPurchase ? (meerwaarde / sumPurchase) * 100 : 0;
+            const totalInvoices  = invoices.reduce((s, i) => s + (i.amount ?? 0), 0);
+            const totalServices  = services.reduce((s, sv) => s + (sv.estimated_cost ?? 0), 0);
+            const totalCosts     = totalInvoices + totalServices;
+
+            // ── build summed time-series ──
+            // All vehicles now share the same 15 monthly dates (2025-04 → 2026-06)
+            const dateSet = new Map();
+            mVehicles.forEach(v => {
+              (v.value_history || []).forEach(p => {
+                dateSet.set(p.d, (dateSet.get(p.d) ?? 0) + p.v);
+              });
+            });
+            // Sort chronologically
+            const series = Array.from(dateSet.entries())
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([d, v]) => ({ d, v }));
+
+            // ── SVG chart geometry ──
+            const PAD = { top: 28, right: 18, bottom: 36, left: 18 };
+            const VW = 360; const VH = 200; // viewBox units
+            const chartW = VW - PAD.left - PAD.right;
+            const chartH = VH - PAD.top - PAD.bottom;
+            const seriesVals = series.map(p => p.v);
+            const minV = Math.min(...seriesVals);
+            const maxV = Math.max(...seriesVals);
+            const span = maxV - minV || 1;
+
+            const xOf = (i) => PAD.left + (i / (series.length - 1)) * chartW;
+            const yOf = (v) => PAD.top + chartH - ((v - minV) / span) * chartH;
+
+            const pts = series.map((p, i) => `${xOf(i)},${yOf(p.v)}`).join(" ");
+            // Area path: line down to baseline and back
+            const firstX = xOf(0), lastX = xOf(series.length - 1), baseY = PAD.top + chartH;
+            const areaPath = `M ${firstX},${baseY} L ${pts.split(" ").map(pt => pt).join(" L ")} L ${lastX},${baseY} Z`;
+            // Rewrite as M firstX,baseY L points L lastX,baseY Z
+            const areaD = `M ${firstX},${baseY} ${series.map((p, i) => `L ${xOf(i)},${yOf(p.v)}`).join(" ")} L ${lastX},${baseY} Z`;
+            const lineD = series.map((p, i) => `${i === 0 ? "M" : "L"} ${xOf(i)},${yOf(p.v)}`).join(" ");
+
+            // Min / max annotation positions
+            const maxIdx = seriesVals.indexOf(maxV);
+            const minIdx = seriesVals.indexOf(minV);
+
+            const startVal = series[0]?.v ?? 0;
+            const endVal   = series[series.length - 1]?.v ?? 0;
+            const chartPct = startVal ? ((endVal - startVal) / startVal) * 100 : 0;
+
+            // ── verdeling per wagen ──
+            const sortedVeh = [...mVehicles].sort((a, b) =>
+              (b.current_value ?? b.value ?? 0) - (a.current_value ?? a.value ?? 0));
+
+            return (
+              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+
+                {/* ── KERNCIJFERS ── */}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                  {[
+                    { label:"COLLECTIEWAARDE", value: fmtVal(sumCurrent), color: C.goldBright },
+                    { label:"GEÏNVESTEERD",    value: fmtVal(sumPurchase), color: C.text },
+                    { label:"ONGEREALISEERDE MEERWAARDE",
+                      value: `${meerwaarde >= 0 ? "+" : ""}${fmtVal(Math.abs(meerwaarde))}`,
+                      sub:   `${meerwaarde >= 0 ? "▲" : "▼"} ${Math.abs(meerPct).toFixed(1).replace(".",",")}%`,
+                      color: meerwaarde >= 0 ? C.green : C.red },
+                    { label:"TOTALE KOSTEN",   value: fmtVal(totalCosts), color: C.text },
+                  ].map((item, i) => (
+                    <div key={i} style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:12, padding:"16px 18px" }}>
+                      <div style={{ fontSize:7, letterSpacing:"0.22em", color:C.textDark, fontFamily:mono, marginBottom:8 }}>{item.label}</div>
+                      <div style={{ fontSize:20, fontFamily:serif, color:item.color, lineHeight:1 }}>{item.value}</div>
+                      {item.sub && <div style={{ fontSize:10, fontFamily:mono, color:item.color, marginTop:4, opacity:0.8 }}>{item.sub}</div>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── COLLECTIEWAARDE-EVOLUTIE ── */}
+                <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"20px 18px" }}>
+                  <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:14 }}>COLLECTIEWAARDE-EVOLUTIE</div>
+                  <svg
+                    viewBox={`0 0 ${VW} ${VH}`}
+                    preserveAspectRatio="xMidYMid meet"
+                    width="100%"
+                    style={{ display:"block", overflow:"visible" }}
+                  >
+                    <defs>
+                      <linearGradient id="goldArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%"   stopColor={C.gold} stopOpacity="0.28"/>
+                        <stop offset="100%" stopColor={C.gold} stopOpacity="0.02"/>
+                      </linearGradient>
+                    </defs>
+                    {/* Baseline */}
+                    <line x1={PAD.left} y1={PAD.top + chartH} x2={PAD.left + chartW} y2={PAD.top + chartH}
+                      stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+                    {/* Area fill */}
+                    <path d={areaD} fill="url(#goldArea)"/>
+                    {/* Line */}
+                    <path d={lineD} fill="none" stroke={C.gold} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+                    {/* Max dot + label */}
+                    <circle cx={xOf(maxIdx)} cy={yOf(maxV)} r="3" fill={C.goldBright}/>
+                    <text x={xOf(maxIdx)} y={yOf(maxV) - 7} textAnchor="middle"
+                      fill={C.goldBright} fontSize="7" fontFamily={mono}>{fmtVal(maxV)}</text>
+                    {/* First date label */}
+                    <text x={PAD.left} y={PAD.top + chartH + 14} textAnchor="start"
+                      fill={C.textDark} fontSize="7" fontFamily={mono}>{series[0]?.d}</text>
+                    {/* Last date label */}
+                    <text x={PAD.left + chartW} y={PAD.top + chartH + 14} textAnchor="end"
+                      fill={C.textDark} fontSize="7" fontFamily={mono}>{series[series.length - 1]?.d}</text>
+                    {/* Last value dot */}
+                    <circle cx={xOf(series.length - 1)} cy={yOf(endVal)} r="3.5" fill={C.goldBright}/>
+                  </svg>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:8, paddingTop:10, borderTop:`1px solid rgba(255,255,255,0.05)` }}>
+                    <div style={{ fontSize:10, color:C.textDark, fontFamily:mono }}>{series[0]?.d} → {series[series.length-1]?.d}</div>
+                    <div style={{ fontSize:11, fontFamily:mono, color: chartPct >= 0 ? C.green : C.red }}>
+                      {chartPct >= 0 ? "▲" : "▼"} {Math.abs(chartPct).toFixed(1).replace(".",",")}% — {fmtVal(startVal)} → {fmtVal(endVal)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── VERDELING PER WAGEN ── */}
+                <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"20px 18px" }}>
+                  <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:14 }}>VERDELING PER WAGEN</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {sortedVeh.map(v => {
+                      const cv = v.current_value ?? v.value ?? 0;
+                      const pct = sumCurrent ? (cv / sumCurrent) * 100 : 0;
+                      const brand = v.models?.brands?.name ?? "—";
+                      const model = v.models?.name ?? "—";
+                      return (
+                        <div key={v.id}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:5 }}>
+                            <div>
+                              <span style={{ fontSize:8, letterSpacing:"0.18em", color:C.textDark, fontFamily:mono }}>{brand.toUpperCase()} </span>
+                              <span style={{ fontSize:11, color:C.text }}>{model}</span>
+                            </div>
+                            <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+                              <span style={{ fontSize:13, fontFamily:mono, color:C.goldBright }}>{fmtVal(cv)}</span>
+                              <span style={{ fontSize:9, fontFamily:mono, color:C.textDark }}>{pct.toFixed(1).replace(".",",")}%</span>
+                            </div>
+                          </div>
+                          <div style={{ height:4, background:"rgba(255,255,255,0.05)", borderRadius:2, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${C.goldBright}, ${C.gold})`, borderRadius:2, transition:"width 0.6s ease" }}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── CONDITIE & GEBRUIK ── */}
+                <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"20px 18px" }}>
+                  <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:14 }}>CONDITIE &amp; GEBRUIK</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {sortedVeh.map(v => {
+                      const score = v.condition_score ?? 0;
+                      const brand = v.models?.brands?.name ?? "—";
+                      const model = v.models?.name ?? "—";
+                      return (
+                        <div key={v.id} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:9, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                              <span style={{ fontSize:7, letterSpacing:"0.15em", color:C.textDark, fontFamily:mono }}>{brand.toUpperCase()} </span>{model}
+                            </div>
+                          </div>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                            <div style={{ width:60, height:3, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                              <div style={{ height:"100%", width:`${score}%`, background: score >= 95 ? C.green : score >= 85 ? C.gold : C.orange, borderRadius:2 }}/>
+                            </div>
+                            <span style={{ fontSize:9, fontFamily:mono, color:C.goldBright, width:32, textAlign:"right" }}>{score}/100</span>
+                          </div>
+                          <div style={{ fontSize:9, fontFamily:mono, color:C.textDark, width:64, textAlign:"right", flexShrink:0 }}>{v.mileage || "—"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
               </div>
             );
           })()}
@@ -762,8 +947,13 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
       {/* ─── COLLECTION VALUE ─── */}
       <div style={{ flexShrink:0, padding:"0 10px 6px" }}>
-        <div style={{ background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 14, padding: "20px 22px", marginTop: 14 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.25em", color: C.textMuted, fontFamily: mono }}>TOTALE COLLECTIEWAARDE</div>
+        <div onClick={() => setNav("portfolio")} style={{ background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 14, padding: "20px 22px", marginTop: 14, cursor:"pointer", transition:"border-color 0.2s" }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = C.goldDim}
+          onMouseLeave={e => e.currentTarget.style.borderColor = C.panelBorder}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.25em", color: C.textMuted, fontFamily: mono }}>TOTALE COLLECTIEWAARDE</div>
+            <div style={{ fontSize: 9, fontFamily: mono, color: C.goldDim, letterSpacing:"0.12em" }}>Bekijk portfolio ›</div>
+          </div>
           <div style={{ fontSize: 30, fontFamily: serif, color: C.goldBright, marginTop: 6 }}>{fmtVal(totalValue)}</div>
           <div style={{ fontSize: 11, fontFamily: mono, marginTop: 4, color: valueDelta >= 0 ? C.green : C.red }}>
             {valueDelta >= 0 ? "▲" : "▼"} {fmtVal(Math.abs(valueDelta))} ({valuePct.toFixed(1).replace(".", ",")}%) sinds aankoop
