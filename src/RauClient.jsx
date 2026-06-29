@@ -8,6 +8,7 @@ import { supabase } from "./supabase";
 import { estimateValuation } from "./demo/valuation.js";
 import { aiValuation, isLiveEnabled } from "./demo/aiValuation.js";
 import { DARK, LIGHT } from "./demo/theme";
+import { getPhotos, addPhotos, removePhoto, fileToDataUrl } from "./demo/gallery";
 
 /* ═══════════════════════════════════════════
    TOKENS
@@ -204,6 +205,9 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
   const [selectedService, setSelectedService] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [dossierId, setDossierId] = useState(null);
+  const [galleryPhotos, setGalleryPhotos] = useState([]);
+  const [lightbox, setLightbox] = useState(null);
+  const galleryInputRef = useRef(null);
   const [dossierToast, setDossierToast] = useState(null);
   const canvasRef  = useRef(null);
   const cleanupRef = useRef(null);
@@ -212,6 +216,20 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
   const [valuations, setValuations] = useState({});
 
   useEffect(() => { if (clientId) loadAll(); else setLoading(false); }, [clientId]);
+
+  // Fotogalerij per wagen (lokaal opgeslagen).
+  useEffect(() => { setGalleryPhotos(dossierId ? getPhotos(dossierId) : []); }, [dossierId]);
+
+  const handleAddPhotos = async (fileList) => {
+    if (!dossierId || !fileList?.length) return;
+    const urls = [];
+    for (const file of Array.from(fileList)) {
+      try { urls.push(await fileToDataUrl(file)); } catch { /* sla over */ }
+    }
+    if (urls.length) setGalleryPhotos(addPhotos(dossierId, urls));
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
+  };
+  const handleRemovePhoto = (i) => { if (dossierId) setGalleryPhotos(removePhoto(dossierId, i)); };
 
   // Laad AI-waarderingen zodra voertuigen beschikbaar zijn.
   // Synchrone offline schatting is onmiddellijk; async live vervangt nadien.
@@ -820,6 +838,40 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
                   </div>
                 )}
 
+                {/* ── GALERIJ ── */}
+                <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"18px 22px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono }}>GALERIJ</div>
+                    <div style={{ fontSize:9, fontFamily:mono, color:C.textDark }}>{galleryPhotos.length}/12</div>
+                  </div>
+                  <input ref={galleryInputRef} type="file" accept="image/*" multiple style={{ display:"none" }}
+                    onChange={e => handleAddPhotos(e.target.files)} />
+                  {galleryPhotos.length === 0 && (
+                    <div style={{ fontSize:11, color:C.textMuted, marginBottom:12, lineHeight:1.6 }}>
+                      Voeg je eigen foto's van deze wagen toe — ze blijven hier bewaard.
+                    </div>
+                  )}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px,1fr))", gap:10 }}>
+                    {galleryPhotos.map((src, i) => (
+                      <div key={i} style={{ position:"relative", paddingTop:"72%", borderRadius:8, overflow:"hidden", border:`1px solid ${C.line}` }}>
+                        <img src={src} alt={`Foto ${i+1}`} onClick={() => setLightbox(src)}
+                          style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", cursor:"zoom-in" }} />
+                        <div onClick={() => handleRemovePhoto(i)} title="Verwijderen"
+                          style={{ position:"absolute", top:5, right:5, width:20, height:20, borderRadius:"50%", background:"rgba(0,0,0,0.55)", color:"#fff", fontSize:12, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", backdropFilter:"blur(2px)" }}>×</div>
+                      </div>
+                    ))}
+                    {galleryPhotos.length < 12 && (
+                      <div onClick={() => galleryInputRef.current?.click()}
+                        style={{ paddingTop:"72%", position:"relative", borderRadius:8, border:`1px dashed ${C.goldDim}`, cursor:"pointer", background:C.goldSubtle }}>
+                        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, color:C.gold }}>
+                          <div style={{ fontSize:20, lineHeight:1 }}>+</div>
+                          <div style={{ fontSize:8, fontFamily:mono, letterSpacing:"0.12em" }}>FOTO TOEVOEGEN</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* ── CONCIERGE ACTIES ── */}
                 <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:14, padding:"18px 22px" }}>
                   <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:16 }}>CONCIERGE ACTIES</div>
@@ -846,6 +898,12 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
                     ))}
                   </div>
                 </div>
+
+                {lightbox && (
+                  <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.9)", display:"flex", alignItems:"center", justifyContent:"center", padding:30, cursor:"zoom-out" }}>
+                    <img src={lightbox} alt="Foto" style={{ maxWidth:"100%", maxHeight:"100%", borderRadius:8, boxShadow:"0 20px 80px rgba(0,0,0,0.7)" }} />
+                  </div>
+                )}
 
               </div>
             );
