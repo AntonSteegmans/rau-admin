@@ -4,6 +4,7 @@ import AdminDashboard from "./RauAdmin";
 import ClientPortal from "./RauClient";
 import { resetDemo } from "./demo/store";
 import { isLiveEnabled, setLiveEnabled, getApiKey, setApiKey } from "./demo/aiValuation.js";
+import { getTheme, setTheme as persistTheme, DARK, LIGHT } from "./demo/theme";
 
 const ROLE_KEY = "rau-demo-role";
 
@@ -60,7 +61,7 @@ function AiPanel({ onClose }) {
   );
 }
 
-function DemoBar({ role, setRole }) {
+function DemoBar({ role, setRole, theme, setTheme }) {
   const [aiOpen, setAiOpen] = useState(false);
   const [liveActive, setLiveActive] = useState(isLiveEnabled());
 
@@ -94,6 +95,14 @@ function DemoBar({ role, setRole }) {
         </button>
         {aiOpen && <AiPanel onClose={handleAiClose} />}
       </div>
+      {/* Theme toggle */}
+      <button
+        onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+        title={theme === "light" ? "Donker thema" : "Licht thema"}
+        style={{ ...btn(false), padding: "5px 8px", fontSize: 13, lineHeight: 1, border: "1px solid rgba(255,255,255,0.12)" }}
+      >
+        {theme === "light" ? "🌙" : "☀️"}
+      </button>
     </div>
   );
 }
@@ -102,15 +111,24 @@ function App() {
   const [role, setRole] = useState(() => localStorage.getItem(ROLE_KEY) || "admin");
   useEffect(() => { localStorage.setItem(ROLE_KEY, role); }, [role]);
 
+  const [theme, setThemeState] = useState(() => getTheme());
+  const handleSetTheme = (t) => { persistTheme(t); setThemeState(t); };
+  // Body-achtergrond meeschakelen zodat er geen donkere strook onder de content valt.
+  useEffect(() => {
+    const bg = (theme === "light" ? LIGHT : DARK).bg;
+    document.body.style.background = bg;
+    document.documentElement.style.background = bg;
+  }, [theme]);
+
   const demoUser = { id: "demo-user", email: "demo@rau.be" };
   const signOut = () => setRole(role === "admin" ? "client" : "admin");
 
   return (
     <>
-      <DemoBar role={role} setRole={setRole} />
+      <DemoBar role={role} setRole={setRole} theme={theme} setTheme={handleSetTheme} />
       {role === "admin"
-        ? <AdminDashboard user={demoUser} onSignOut={signOut} />
-        : <ClientPortal user={demoUser} clientId="c-maarten" onSignOut={signOut} />}
+        ? <AdminDashboard user={demoUser} onSignOut={signOut} theme={theme} setTheme={handleSetTheme} />
+        : <ClientPortal user={demoUser} clientId="c-maarten" onSignOut={signOut} theme={theme} setTheme={handleSetTheme} />}
     </>
   );
 }

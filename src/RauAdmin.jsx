@@ -8,24 +8,12 @@ import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabase";
+import { DARK, LIGHT } from "./demo/theme";
 
 /* ═══════════════════════════════════════════
    DESIGN TOKENS
    ═══════════════════════════════════════════ */
-const C = {
-  bg: "#0a0a0a", panel: "#111111", panelHover: "#181818", panelBorder: "#1e1e1e",
-  surface: "#161616", surfaceHover: "#1c1c1c", surfaceActive: "#242424",
-  accent: "#8a9a6e", accentBright: "#a0b27e", accentDim: "rgba(138,154,110,0.35)",
-  accentSubtle: "rgba(138,154,110,0.08)", accentSubtle2: "rgba(138,154,110,0.15)",
-  gold: "#8a9a6e", goldBright: "#a0b27e", goldDim: "rgba(138,154,110,0.35)",
-  goldSubtle: "rgba(138,154,110,0.08)", goldSubtle2: "rgba(138,154,110,0.15)",
-  white: "#e8e8e4", text: "#b0b0a8", textMuted: "#6a6a64", textDark: "#3e3e3a",
-  red: "#c45050", redDim: "rgba(196,80,80,0.12)", redBg: "rgba(196,80,80,0.06)",
-  green: "#7a9e6a", greenDim: "rgba(122,158,106,0.12)", greenBg: "rgba(122,158,106,0.06)",
-  blue: "#6a8eaa", blueDim: "rgba(106,142,170,0.12)", blueBg: "rgba(106,142,170,0.06)",
-  orange: "#b08a5a", orangeDim: "rgba(176,138,90,0.12)",
-  purple: "#8a7aaa", purpleDim: "rgba(138,122,170,0.12)",
-};
+let C = DARK;
 const mono = "'JetBrains Mono', monospace";
 const sans = "'Outfit', sans-serif";
 
@@ -193,7 +181,7 @@ const navItems = [
 /* ═══════════════════════════════════════════
    3D CAR SCENE — GLB Model Loader + Color Change
    ═══════════════════════════════════════════ */
-function buildCar(canvas, modelUrl, initialBodyColor) {
+function buildCar(canvas, modelUrl, initialBodyColor, theme) {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (!w || !h) return { cleanup: () => {}, setBodyColor: () => {} };
 
@@ -208,7 +196,7 @@ function buildCar(canvas, modelUrl, initialBodyColor) {
 
   // Scene — dark moody studio
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0a0a);
+  scene.background = new THREE.Color(theme === "light" ? 0xeceae5 : 0x0a0a0a);
 
   // Camera
   const cam = new THREE.PerspectiveCamera(32, w / h, 0.1, 200);
@@ -597,7 +585,8 @@ const ChartTip = ({ active, payload }) => {
 /* ═══════════════════════════════════════════
    MAIN APP
    ═══════════════════════════════════════════ */
-export default function AdminDashboard({ user, onSignOut }) {
+export default function AdminDashboard({ user, onSignOut, theme, setTheme }) {
+  C = (theme === "light" ? LIGHT : DARK);
   // Mobile / desktop detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 900);
@@ -1006,18 +995,18 @@ export default function AdminDashboard({ user, onSignOut }) {
     if (modelUrl) {
       setNo3DModel(false);
       setCurrent3DUrl(modelUrl);
-      const result = buildCar(canvasRef.current, modelUrl, savedColor);
+      const result = buildCar(canvasRef.current, modelUrl, savedColor, theme);
       cleanRef.current = result.cleanup;
       sceneRef.current = result;
     } else {
       setNo3DModel(true);
       setCurrent3DUrl(null);
-      const result = buildCar(canvasRef.current, null, null);
+      const result = buildCar(canvasRef.current, null, null, theme);
       cleanRef.current = result.cleanup;
       sceneRef.current = result;
     }
     return () => { if (cleanRef.current) cleanRef.current(); };
-  }, [nav, dashCarIdx, vehicleLinks, dbModels]);
+  }, [nav, dashCarIdx, vehicleLinks, dbModels, theme]);
 
   // Change body color in realtime
   const changeBodyColor = (hex) => {
@@ -1059,7 +1048,7 @@ export default function AdminDashboard({ user, onSignOut }) {
   const dashDisplayName = dashLinkedModel ? `${dashBrand?.name || ""} ${dashLinkedModel.name}` : `${dashVehicle?.make || ""} ${dashVehicle?.name || ""}`;
 
   const renderDashboard = () => (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#0a0a0a", overflowY: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.bg, overflowY: "auto" }}>
 
       {/* ─── KPI STRIP ─── */}
       <div style={{ flexShrink: 0, padding: isMobile ? "16px 16px 0" : "56px 28px 0", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 10 : 14 }}>
@@ -1081,7 +1070,7 @@ export default function AdminDashboard({ user, onSignOut }) {
 
       {/* ─── 3D HERO — contained panel ─── */}
       <div style={{ flexShrink: 0, padding: isMobile ? "12px 16px 0" : "16px 28px 0" }}>
-        <div style={{ position: "relative", height: isMobile ? 260 : 340, maxHeight: 380, border: `1px solid ${C.panelBorder}`, borderRadius: 8, overflow: "hidden", background: "#0a0a0a" }}>
+        <div style={{ position: "relative", height: isMobile ? 260 : 340, maxHeight: 380, border: `1px solid ${C.panelBorder}`, borderRadius: 8, overflow: "hidden", background: C.bg }}>
         <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
 
         {/* Vignette overlay */}
@@ -1142,7 +1131,7 @@ export default function AdminDashboard({ user, onSignOut }) {
                 width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)",
                 display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
                 transition: "all 0.2s", position: "relative", fontSize: 15,
-                color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.02)",
+                color: C.textMuted, background: "rgba(255,255,255,0.02)",
               }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
@@ -1191,7 +1180,7 @@ export default function AdminDashboard({ user, onSignOut }) {
                   <div onClick={() => setDashCarIdx(i => (i - 1 + allVehicles.length) % allVehicles.length)} style={{
                     width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
                     display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                    color: "rgba(255,255,255,0.4)", fontSize: 16, transition: "all 0.2s", background: "rgba(255,255,255,0.03)",
+                    color: C.textMuted, fontSize: 16, transition: "all 0.2s", background: C.hover,
                   }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"}
                     onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
@@ -1199,7 +1188,7 @@ export default function AdminDashboard({ user, onSignOut }) {
                   <div onClick={() => setDashCarIdx(i => (i + 1) % allVehicles.length)} style={{
                     width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
                     display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                    color: "rgba(255,255,255,0.4)", fontSize: 16, transition: "all 0.2s", background: "rgba(255,255,255,0.03)",
+                    color: C.textMuted, fontSize: 16, transition: "all 0.2s", background: C.hover,
                   }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"}
                     onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
@@ -1229,9 +1218,9 @@ export default function AdminDashboard({ user, onSignOut }) {
               <span style={{ fontSize: 15, color: C.white, fontFamily: mono, fontWeight: 400 }}>{dashVehicle?.plate || "—"}</span>
               <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", fontFamily: mono }}>{dashVehicle?.mileage || "0 km"}</span>
             </div>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 14 }} />
+            <div style={{ height: 1, background: C.line, marginBottom: 14 }} />
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 14 }}>{dashVehicle?.color || "—"}</div>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 14 }} />
+            <div style={{ height: 1, background: C.line, marginBottom: 14 }} />
             <div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4 }}>Eigenaar</div>
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{dashVehicle?.clientName || "—"}</div>
@@ -1249,12 +1238,12 @@ export default function AdminDashboard({ user, onSignOut }) {
             {dbServices.filter(s => s.status === "in-progress" || s.status === "scheduled").slice(0, 2).map(s => {
               const sv = getVehicle(s.vehicle_id);
               return (
-                <Hov key={s.id} onClick={() => setSelectedService(s)} style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 8 }}>
+                <Hov key={s.id} onClick={() => setSelectedService(s)} style={{ padding: "10px 0", borderBottom: `1px solid ${C.line}`, marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                     <span style={{ fontSize: 14, color: C.white, fontWeight: 400 }}>{s.type}</span>
                     <StatusBadge status={s.status} />
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{sv?.make} {sv?.name}</div>
+                  <div style={{ fontSize: 12, color: C.textMuted }}>{sv?.make} {sv?.name}</div>
                 </Hov>
               );
             })}
@@ -1614,6 +1603,34 @@ export default function AdminDashboard({ user, onSignOut }) {
       <div style={{ padding: isMobile ? 16 : 28, overflowY: "auto", height: "100%" }}>
         <div style={{ fontSize: 11, letterSpacing: "0.3em", color: C.text, fontWeight: 500, marginBottom: 20 }}>INSTELLINGEN</div>
 
+        {/* ── WEERGAVE ── */}
+        <div style={{ marginBottom: 28, padding: "18px 20px", background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 6 }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.25em", color: C.textDark, fontFamily: mono, marginBottom: 14 }}>WEERGAVE</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 12, color: C.text, fontFamily: sans, marginBottom: 3 }}>Thema</div>
+              <div style={{ fontSize: 10, color: C.textMuted, fontFamily: mono }}>
+                {theme === "light" ? "Licht" : "Donker"}
+              </div>
+            </div>
+            <div
+              onClick={() => setTheme && setTheme(theme === "light" ? "dark" : "light")}
+              style={{ width: 44, height: 24, borderRadius: 12,
+                background: theme === "light" ? C.goldSubtle : C.surface,
+                border: `1px solid ${theme === "light" ? C.goldDim : C.panelBorder}`,
+                position: "relative", cursor: "pointer", transition: "all 0.25s" }}
+            >
+              <div style={{ position: "absolute", top: 4, left: theme === "light" ? 22 : 4,
+                width: 16, height: 16, borderRadius: "50%",
+                background: theme === "light" ? C.gold : C.textMuted,
+                transition: "left 0.25s", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, color: theme === "light" ? C.bg : C.bg }}>
+                {theme === "light" ? "☀" : "☾"}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Flash message */}
         {settingsMsg && (
           <div style={{ padding: "12px 18px", background: C.greenBg, border: `1px solid ${C.green}40`, borderRadius: 4, marginBottom: 16, fontSize: 12, color: C.green }}>
@@ -1830,8 +1847,8 @@ export default function AdminDashboard({ user, onSignOut }) {
     <div style={{ width: "100%", height: "100vh", background: C.bg, color: C.white, fontFamily: sans, overflow: "hidden", position: "relative", letterSpacing: "0.02em" }}>
       <style>{`
         @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
-        *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.08) transparent;box-sizing:border-box}
+        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.line};border-radius:2px}
+        *{scrollbar-width:thin;scrollbar-color:${C.line} transparent;box-sizing:border-box}
         input::placeholder{color:${C.textDark}}
         textarea::placeholder{color:${C.textDark}}
         textarea{resize:vertical}
@@ -1847,10 +1864,10 @@ export default function AdminDashboard({ user, onSignOut }) {
       {isDesktop && (
         <nav style={{
           position: "fixed", top: 0, left: 0, bottom: 0, width: 220, zIndex: 50,
-          background: "rgba(12,12,12,0.98)", borderRight: `1px solid ${C.panelBorder}`,
+          background: C.panel, borderRight: `1px solid ${C.panelBorder}`,
           display: "flex", flexDirection: "column",
         }}>
-          <div style={{ padding: "24px 24px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ padding: "24px 24px 20px", borderBottom: `1px solid ${C.line}` }}>
             <span style={{ fontSize: 22, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.05em" }}>raù</span>
           </div>
           <div style={{ flex: 1, padding: "16px 0", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
@@ -1862,11 +1879,11 @@ export default function AdminDashboard({ user, onSignOut }) {
                   display: "flex", alignItems: "center", gap: 14, padding: "13px 24px",
                   color: a ? C.white : C.textMuted, fontSize: 14, fontWeight: a ? 400 : 300,
                   cursor: "pointer", transition: "all 0.2s",
-                  background: a ? "rgba(255,255,255,0.04)" : "transparent",
+                  background: a ? C.hover : "transparent",
                   borderLeft: a ? `2px solid ${C.accent}` : "2px solid transparent",
                 }}
                   onMouseEnter={e => { if (!a) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
-                  onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? "rgba(255,255,255,0.04)" : "transparent"; }}>
+                  onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? C.hover : "transparent"; }}>
                   <span style={{ width: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: a ? C.gold : "rgba(255,255,255,0.35)", transition: "color 0.2s" }}>{NavIcons[it.id]}</span>
                   <span style={{ letterSpacing: "0.08em", flex: 1 }}>{it.label}</span>
                   {hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "2px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
@@ -1874,9 +1891,9 @@ export default function AdminDashboard({ user, onSignOut }) {
               );
             })}
           </div>
-          <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.line}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono, flexShrink: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", background: C.hover, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono, flexShrink: 0 }}>
                 {(user?.email?.[0] || "A").toUpperCase()}
               </div>
               <div style={{ overflow: "hidden" }}>
@@ -1886,11 +1903,11 @@ export default function AdminDashboard({ user, onSignOut }) {
             </div>
             <div onClick={onSignOut} style={{
               padding: "7px 14px", fontSize: 10, fontFamily: mono, letterSpacing: "0.15em",
-              border: "1px solid rgba(255,255,255,0.06)", color: C.textMuted,
+              border: `1px solid ${C.line}`, color: C.textMuted,
               borderRadius: 4, cursor: "pointer", textAlign: "center", transition: "all 0.2s",
             }}
               onMouseEnter={e => { e.currentTarget.style.color = C.white; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.line; }}
             >UITLOGGEN</div>
           </div>
         </nav>
@@ -1900,13 +1917,13 @@ export default function AdminDashboard({ user, onSignOut }) {
       {!isDesktop && (
         <nav style={{
           position: "fixed", top: 0, left: 0, bottom: 0, width: 280, zIndex: 120,
-          background: "rgba(14,14,14,0.97)", borderRight: "1px solid rgba(255,255,255,0.05)",
+          background: C.panel, borderRight: `1px solid ${C.line}`,
           backdropFilter: "blur(20px)",
           transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
           transform: mobileMenuOpen ? "translateX(0)" : "translateX(-100%)",
           display: "flex", flexDirection: "column",
         }}>
-          <div style={{ padding: "28px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ padding: "28px 24px", borderBottom: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 22, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.05em" }}>raù</span>
             <div onClick={() => setMobileMenuOpen(false)} style={{ cursor: "pointer", color: C.textMuted, fontSize: 18, padding: 4 }}>✕</div>
           </div>
@@ -1919,11 +1936,11 @@ export default function AdminDashboard({ user, onSignOut }) {
                   display: "flex", alignItems: "center", gap: 14, padding: "13px 24px",
                   color: a ? C.white : C.textMuted, fontSize: 14, fontWeight: a ? 400 : 300,
                   cursor: "pointer", transition: "all 0.2s",
-                  background: a ? "rgba(255,255,255,0.04)" : "transparent",
+                  background: a ? C.hover : "transparent",
                   borderLeft: a ? `2px solid ${C.accent}` : "2px solid transparent",
                 }}
                   onMouseEnter={e => { if (!a) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
-                  onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? "rgba(255,255,255,0.04)" : "transparent"; }}>
+                  onMouseLeave={e => { if (!a) e.currentTarget.style.background = a ? C.hover : "transparent"; }}>
                   <span style={{ width: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: a ? C.gold : "rgba(255,255,255,0.35)", transition: "color 0.2s" }}>{NavIcons[it.id]}</span>
                   <span style={{ letterSpacing: "0.08em", flex: 1 }}>{it.label}</span>
                   {hasNotif && <span style={{ fontSize: 9, fontFamily: mono, padding: "2px 7px", background: C.redBg, color: C.red, borderRadius: 10 }}>{unreadMessages}</span>}
@@ -1931,9 +1948,9 @@ export default function AdminDashboard({ user, onSignOut }) {
               );
             })}
           </div>
-          <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.line}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono, flexShrink: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", background: C.hover, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.textMuted, fontWeight: 500, fontFamily: mono, flexShrink: 0 }}>
                 {(user?.email?.[0] || "A").toUpperCase()}
               </div>
               <div style={{ overflow: "hidden" }}>
@@ -1943,11 +1960,11 @@ export default function AdminDashboard({ user, onSignOut }) {
             </div>
             <div onClick={onSignOut} style={{
               padding: "7px 14px", fontSize: 10, fontFamily: mono, letterSpacing: "0.15em",
-              border: "1px solid rgba(255,255,255,0.06)", color: C.textMuted,
+              border: `1px solid ${C.line}`, color: C.textMuted,
               borderRadius: 4, cursor: "pointer", textAlign: "center", transition: "all 0.2s",
             }}
               onMouseEnter={e => { e.currentTarget.style.color = C.white; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.line; }}
             >UITLOGGEN</div>
           </div>
         </nav>
@@ -1959,7 +1976,7 @@ export default function AdminDashboard({ user, onSignOut }) {
         {nav !== "dashboard" && (
           <div style={{
             height: 56, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "0 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: C.bg,
+            padding: "0 24px", borderBottom: `1px solid ${C.line}`, background: C.bg,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               {/* Hamburger — only on mobile/tablet */}

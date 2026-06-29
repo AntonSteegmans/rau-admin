@@ -7,20 +7,12 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { supabase } from "./supabase";
 import { estimateValuation } from "./demo/valuation.js";
 import { aiValuation, isLiveEnabled } from "./demo/aiValuation.js";
+import { DARK, LIGHT } from "./demo/theme";
 
 /* ═══════════════════════════════════════════
    TOKENS
    ═══════════════════════════════════════════ */
-const C = {
-  bg: "#080808", panel: "#0f0f0f", panelBorder: "rgba(255,255,255,0.06)",
-  surface: "#161616", gold: "#8a9a6e", goldBright: "#a0b27e",
-  goldSubtle: "rgba(138,154,110,0.08)", goldDim: "rgba(138,154,110,0.35)",
-  white: "#e8e8e4", text: "#b0b0a8", textMuted: "#6a6a64", textDark: "#3e3e3a",
-  green: "#7a9e6a", greenBg: "rgba(122,158,106,0.1)", greenBorder: "rgba(122,158,106,0.3)",
-  blue: "#6a8eaa", blueBg: "rgba(106,142,170,0.1)",
-  orange: "#b08a5a", orangeBg: "rgba(176,138,90,0.1)",
-  red: "#c45050",
-};
+let C = DARK;
 const mono = "'JetBrains Mono', monospace";
 const sans = "'Outfit', sans-serif";
 const serif = "'Cormorant Garamond', serif";
@@ -56,8 +48,8 @@ const StatusBadge = ({ status }) => {
     completed:        { bg: C.greenBg,     border: C.greenBorder,    color: C.green,  label: "Voltooid" },
     paid:             { bg: C.greenBg,     border: C.greenBorder,    color: C.green,  label: "Betaald" },
     pending:          { bg: C.goldSubtle,  border: C.goldDim,        color: C.gold,   label: "Open" },
-    overdue:          { bg: "rgba(196,80,80,0.06)", border: C.red+"40", color: C.red, label: "Achterstallig" },
-    draft:            { bg: "rgba(255,255,255,0.03)", border: "rgba(255,255,255,0.08)", color: C.textMuted, label: "Concept" },
+    overdue:          { bg: C.redBg, border: C.red+"40", color: C.red, label: "Achterstallig" },
+    draft:            { bg: C.hover, border: C.line, color: C.textMuted, label: "Concept" },
   };
   const s = map[status] || map.draft;
   return (
@@ -71,7 +63,7 @@ const StatusBadge = ({ status }) => {
 /* ═══════════════════════════════════════════
    3D SCENE
    ═══════════════════════════════════════════ */
-function buildScene(canvas, modelUrl) {
+function buildScene(canvas, modelUrl, theme) {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (!w || !h) return { cleanup: () => {} };
 
@@ -84,7 +76,7 @@ function buildScene(canvas, modelUrl) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x080808);
+  scene.background = new THREE.Color(theme === "light" ? 0xeceae5 : 0x080808);
 
   // Image-based lighting: geeft de lak realistische studio-reflecties (cruciaal voor donkere wagens).
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -194,7 +186,8 @@ function buildScene(canvas, modelUrl) {
 /* ═══════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
-export default function ClientPortal({ user, clientId, onSignOut }) {
+export default function ClientPortal({ user, clientId, onSignOut, theme, setTheme }) {
+  C = (theme === "light" ? LIGHT : DARK);
   const [client, setClient]       = useState(null);
   const [vehicles, setVehicles]   = useState([]);
   const [services, setServices]   = useState([]);
@@ -262,10 +255,10 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
   useEffect(() => {
     if (loading || displayMode !== "3d" || !canvasRef.current || nav !== "dashboard") return;
     if (cleanupRef.current) { cleanupRef.current(); cleanupRef.current = null; }
-    const result = buildScene(canvasRef.current, modelUrl);
+    const result = buildScene(canvasRef.current, modelUrl, theme);
     cleanupRef.current = result.cleanup;
     return () => { if (cleanupRef.current) cleanupRef.current(); };
-  }, [loading, displayMode, vehicle?.id, modelUrl, nav]);
+  }, [loading, displayMode, vehicle?.id, modelUrl, nav, theme]);
 
   const firstName  = client?.name?.split(" ")[0] ?? "Welkom";
   const brandName  = vehicle?.models?.brands?.name ?? "";
@@ -314,7 +307,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
   };
 
   /* ─── shared sub-styles ─── */
-  const inputSt = { width:"100%", padding:"10px 14px", background:C.surface, border:`1px solid rgba(255,255,255,0.08)`, borderRadius:6, color:C.white, fontSize:12, fontFamily:sans, outline:"none" };
+  const inputSt = { width:"100%", padding:"10px 14px", background:C.surface, border:`1px solid ${C.line}`, borderRadius:6, color:C.white, fontSize:12, fontFamily:sans, outline:"none" };
 
   /* ─── MODAL ─── */
   const Modal = ({ open, onClose, title, children, width=480 }) => {
@@ -334,7 +327,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
   const Btn = ({ children, onClick, primary, small, style }) => (
     <button onClick={onClick} style={{ padding: small ? "7px 14px" : "10px 20px", fontSize: small ? 10 : 11, fontFamily: mono, fontWeight:500, letterSpacing:"0.12em",
-      border: primary ? `1px solid ${C.gold}60` : `1px solid rgba(255,255,255,0.1)`,
+      border: primary ? `1px solid ${C.gold}60` : `1px solid ${C.line}`,
       background: primary ? C.goldSubtle : "transparent",
       color: primary ? C.gold : C.textMuted, borderRadius:6, cursor:"pointer", transition:"all 0.2s", ...style }}
       onMouseEnter={e=>{ e.currentTarget.style.opacity="0.75"; }}
@@ -348,7 +341,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
     const backNav = nav === "voertuig" ? "wagens" : "dashboard";
     return (
       <div style={{ height:"100vh", background:C.bg, color:C.white, fontFamily:sans, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        <style>{`::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08)}*{box-sizing:border-box} input::placeholder,textarea::placeholder{color:#3e3e3a} @media screen{.rau-print-report{display:none!important}} @media print{body *{visibility:hidden!important} .rau-print-report,.rau-print-report *{visibility:visible!important} .rau-print-report{position:absolute;left:0;top:0;width:100%;display:block!important} @page{margin:18mm}}`}</style>
+        <style>{`::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.line}}*{box-sizing:border-box} input::placeholder,textarea::placeholder{color:${C.textDark}} @media screen{.rau-print-report{display:none!important}} @media print{body *{visibility:hidden!important} .rau-print-report,.rau-print-report *{visibility:visible!important} .rau-print-report{position:absolute;left:0;top:0;width:100%;display:block!important} @page{margin:18mm}}`}</style>
 
         {/* ─── PRINT-ONLY COLLECTIERAPPORT ─── */}
         {(() => {
@@ -473,9 +466,9 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
         })()}
 
         {/* Section header */}
-        <div style={{ height:56, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", borderBottom:`1px solid rgba(255,255,255,0.05)` }}>
+        <div style={{ height:56, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", borderBottom:`1px solid ${C.line}` }}>
           <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-            <div onClick={()=>setNav(backNav)} style={{ width:32,height:32,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.textMuted,fontSize:16 }}>‹</div>
+            <div onClick={()=>setNav(backNav)} style={{ width:32,height:32,borderRadius:"50%",border:`1px solid ${C.line}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.textMuted,fontSize:16 }}>‹</div>
             <span style={{ fontFamily:serif, fontSize:18, color:C.white }}>raù</span>
             <span style={{ fontSize:10, letterSpacing:"0.25em", color:C.textMuted }}>{sectionTitle}</span>
           </div>
@@ -507,7 +500,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                           <div key={i}><div style={{ fontSize:8, letterSpacing:"0.2em", color:C.textDark }}>{l}</div><div style={{ fontSize:11, color:C.text, fontFamily:mono, marginTop:2 }}>{val}</div></div>
                         ))}
                       </div>
-                      {v.value > 0 && <div style={{ marginTop:14, paddingTop:12, borderTop:`1px solid rgba(255,255,255,0.06)`, fontSize:16, color:C.goldBright, fontFamily:mono, fontWeight:500 }}>{fmtVal(v.value)}</div>}
+                      {v.value > 0 && <div style={{ marginTop:14, paddingTop:12, borderTop:`1px solid ${C.line}`, fontSize:16, color:C.goldBright, fontFamily:mono, fontWeight:500 }}>{fmtVal(v.value)}</div>}
                       {Array.isArray(v.value_history) && v.value_history.length > 1 && (() => {
                         const vals = v.value_history.map(p => p.v);
                         const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
@@ -530,7 +523,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                         </div>
                       )}
                       {Array.isArray(v.documents) && (
-                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
                           <div style={{ fontSize: 8, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>DOCUMENTEN</div>
                           {v.documents.map((d, i) => (
                             <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.text, padding: "2px 0" }}>
@@ -540,7 +533,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                         </div>
                       )}
                       {/* ── DOSSIER LINK ── */}
-                      <div style={{ marginTop:14, paddingTop:12, borderTop:`1px solid rgba(255,255,255,0.06)`, display:"flex", justifyContent:"flex-end" }}>
+                      <div style={{ marginTop:14, paddingTop:12, borderTop:`1px solid ${C.line}`, display:"flex", justifyContent:"flex-end" }}>
                         <span style={{ fontSize:10, fontFamily:mono, letterSpacing:"0.15em", color:C.gold, opacity:0.8 }}>Bekijk dossier ›</span>
                       </div>
                       {/* ── AI-WAARDERING ── */}
@@ -555,14 +548,14 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                         const trendColor  = val.trendPct >= 0 ? C.green : C.red;
                         const trendArrow  = val.trendPct >= 0 ? "▲" : "▼";
                         return (
-                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
                             {/* Koptekst */}
                             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                               <div style={{ fontSize:8, letterSpacing:"0.2em", color:C.textDark }}>AI-WAARDERING</div>
                               <span style={{ fontSize:8, fontFamily:mono, letterSpacing:"0.12em", padding:"1px 6px", borderRadius:3,
-                                background: val.source === "claude" ? C.goldSubtle : "rgba(255,255,255,0.04)",
+                                background: val.source === "claude" ? C.goldSubtle : C.hover,
                                 color: val.source === "claude" ? C.gold : C.textDark,
-                                border: `1px solid ${val.source === "claude" ? C.goldDim : "rgba(255,255,255,0.06)"}` }}>
+                                border: `1px solid ${val.source === "claude" ? C.goldDim : C.line}` }}>
                                 {sourceLabel.toUpperCase()}
                               </span>
                             </div>
@@ -575,7 +568,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                             </div>
                             {/* Betrouwbaarheid */}
                             <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
-                              <div style={{ flex:1, height:3, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                              <div style={{ flex:1, height:3, background:C.line, borderRadius:2, overflow:"hidden" }}>
                                 <div style={{ height:"100%", width:`${val.confidence}%`, background:`${C.gold}80`, borderRadius:2 }} />
                               </div>
                               <span style={{ fontSize:9, fontFamily:mono, color:C.textMuted, whiteSpace:"nowrap" }}>
@@ -642,7 +635,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                         <stop offset="100%" stopColor={C.gold} stopOpacity="0.02"/>
                       </linearGradient>
                     </defs>
-                    <line x1={PAD.left} y1={PAD.top+cH} x2={PAD.left+cW} y2={PAD.top+cH} stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+                    <line x1={PAD.left} y1={PAD.top+cH} x2={PAD.left+cW} y2={PAD.top+cH} stroke={C.line} strokeWidth="1"/>
                     <path d={areaD} fill="url(#vArea)"/>
                     <path d={lineD} fill="none" stroke={C.gold} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
                     <circle cx={xOf(maxIdx)} cy={yOf(maxV)} r="3" fill={C.goldBright}/>
@@ -651,7 +644,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                     <text x={PAD.left} y={PAD.top+cH+14} textAnchor="start" fill={C.textDark} fontSize="7" fontFamily={mono}>{vhist[0].d}</text>
                     <text x={PAD.left+cW} y={PAD.top+cH+14} textAnchor="end" fill={C.textDark} fontSize="7" fontFamily={mono}>{vhist[vhist.length-1].d}</text>
                   </svg>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:6, paddingTop:8, borderTop:`1px solid rgba(255,255,255,0.05)` }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:6, paddingTop:8, borderTop:`1px solid ${C.line}` }}>
                     <div style={{ fontSize:20, fontFamily:serif, color:C.goldBright }}>{fmtVal(v.current_value ?? v.value)}</div>
                     {trendPct != null && (
                       <div style={{ fontSize:11, fontFamily:mono, color: trendPct>=0?C.green:C.red }}>
@@ -678,19 +671,19 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                         <img src={dossierImgUrl} alt={`${vBrand} ${vModel}`}
                           onError={e=>{e.currentTarget.style.display="none"}}
                           style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", filter:"saturate(0.85) brightness(0.8)" }}/>
-                        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, rgba(8,8,8,0.3) 0%, rgba(8,8,8,0.6) 100%)", pointerEvents:"none" }}/>
+                        <div style={{ position:"absolute", inset:0, background: theme === "light" ? "linear-gradient(to bottom, rgba(244,242,238,0.15) 0%, rgba(244,242,238,0.5) 100%)" : "linear-gradient(to bottom, rgba(8,8,8,0.3) 0%, rgba(8,8,8,0.6) 100%)", pointerEvents:"none" }}/>
                       </>
                     ) : (
                       <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center" }}>
                         <div style={{ textAlign:"center" }}>
                           <div style={{ fontSize:52, opacity:0.05 }}>⬡</div>
-                          <div style={{ fontSize:10, color:"rgba(255,255,255,0.1)", fontFamily:mono, letterSpacing:"0.22em", marginTop:8 }}>GEEN AFBEELDING</div>
+                          <div style={{ fontSize:10, color:C.textDark, fontFamily:mono, letterSpacing:"0.22em", marginTop:8 }}>GEEN AFBEELDING</div>
                         </div>
                       </div>
                     )}
                     {/* Overlay info */}
                     <div style={{ position:"absolute", bottom:18, left:22, zIndex:5 }}>
-                      <div style={{ fontSize:9, letterSpacing:"0.28em", color:"rgba(255,255,255,0.4)", fontFamily:mono }}>{vBrand.toUpperCase()}</div>
+                      <div style={{ fontSize:9, letterSpacing:"0.28em", color:C.textDark, fontFamily:mono }}>{vBrand.toUpperCase()}</div>
                       <div style={{ fontSize:28, fontFamily:serif, color:C.white, lineHeight:1.1, marginTop:2 }}>{vModel}</div>
                     </div>
                     <div style={{ position:"absolute", bottom:22, right:22, zIndex:5 }}>
@@ -734,9 +727,9 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
                         <div style={{ fontSize:8, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono }}>AI-WAARDERING</div>
                         <span style={{ fontSize:8, fontFamily:mono, letterSpacing:"0.12em", padding:"2px 8px", borderRadius:3,
-                          background:val.source==="claude"?C.goldSubtle:"rgba(255,255,255,0.04)",
+                          background:val.source==="claude"?C.goldSubtle:C.hover,
                           color:val.source==="claude"?C.gold:C.textDark,
-                          border:`1px solid ${val.source==="claude"?C.goldDim:"rgba(255,255,255,0.06)"}` }}>
+                          border:`1px solid ${val.source==="claude"?C.goldDim:C.line}` }}>
                           {sourceLabel.toUpperCase()}
                         </span>
                       </div>
@@ -745,7 +738,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                         <span style={{ fontSize:12, fontFamily:mono, color:trendColor }}>{trendArrow} {Math.abs(val.trendPct).toFixed(1).replace(".",",")}%</span>
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-                        <div style={{ flex:1, height:3, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                        <div style={{ flex:1, height:3, background:C.line, borderRadius:2, overflow:"hidden" }}>
                           <div style={{ height:"100%", width:`${val.confidence}%`, background:`${C.gold}80`, borderRadius:2 }}/>
                         </div>
                         <span style={{ fontSize:9, fontFamily:mono, color:C.textMuted, whiteSpace:"nowrap" }}>{val.confidence}% betrouwbaar</span>
@@ -780,7 +773,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                             {/* Timeline line */}
                             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, width:32 }}>
                               <div style={{ width:10, height:10, borderRadius:"50%", border:`2px solid ${C.gold}`, background:s.status==="completed"?C.gold:C.bg, marginTop:2, flexShrink:0, zIndex:1 }}/>
-                              {!isLast && <div style={{ width:1, flex:1, background:"rgba(255,255,255,0.08)", minHeight:20, marginTop:2 }}/>}
+                              {!isLast && <div style={{ width:1, flex:1, background:C.line, minHeight:20, marginTop:2 }}/>}
                             </div>
                             {/* Content */}
                             <div style={{ paddingBottom: isLast?0:18, flex:1 }}>
@@ -842,10 +835,10 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                       { kind:"detailing", label:"Boek detailing",       icon:"✨", desc:"Detailing & onderhoud" },
                     ].map(({ kind, label, icon, desc }) => (
                       <button key={kind} onClick={()=>requestService(v, kind)}
-                        style={{ padding:"16px 18px", background:C.surface, border:`1px solid rgba(255,255,255,0.08)`, borderRadius:10,
+                        style={{ padding:"16px 18px", background:C.surface, border:`1px solid ${C.line}`, borderRadius:10,
                           color:C.text, cursor:"pointer", textAlign:"left", transition:"all 0.2s" }}
                         onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.goldDim; e.currentTarget.style.background=C.goldSubtle; }}
-                        onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; e.currentTarget.style.background=C.surface; }}>
+                        onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.line; e.currentTarget.style.background=C.surface; }}>
                         <div style={{ fontSize:18, marginBottom:8 }}>{icon}</div>
                         <div style={{ fontSize:11, fontFamily:mono, letterSpacing:"0.12em", color:C.gold, marginBottom:4 }}>{label.toUpperCase()}</div>
                         <div style={{ fontSize:10, color:C.textMuted }}>{desc}</div>
@@ -890,7 +883,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                   {totalOpen > 0 && <div style={{ fontSize:12, color:C.red, fontFamily:mono }}>Openstaand: €{totalOpen.toLocaleString()}</div>}
                   <div style={{ display:"flex", gap:6 }}>
                     {["all","paid","pending","overdue"].map(f=>(
-                      <div key={f} onClick={()=>setInvoiceFilter(f)} style={{ padding:"5px 12px", fontSize:10, fontFamily:mono, cursor:"pointer", borderRadius:4, border:`1px solid ${invoiceFilter===f?C.gold:"rgba(255,255,255,0.08)"}`, color:invoiceFilter===f?C.gold:C.textMuted, background:invoiceFilter===f?C.goldSubtle:"transparent" }}>
+                      <div key={f} onClick={()=>setInvoiceFilter(f)} style={{ padding:"5px 12px", fontSize:10, fontFamily:mono, cursor:"pointer", borderRadius:4, border:`1px solid ${invoiceFilter===f?C.gold:C.line}`, color:invoiceFilter===f?C.gold:C.textMuted, background:invoiceFilter===f?C.goldSubtle:"transparent" }}>
                         {f==="all"?"ALLE":f==="paid"?"BETAALD":f==="pending"?"OPEN":"ACHTERSTALLIG"}
                       </div>
                     ))}
@@ -1025,7 +1018,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                     </defs>
                     {/* Baseline */}
                     <line x1={PAD.left} y1={PAD.top + chartH} x2={PAD.left + chartW} y2={PAD.top + chartH}
-                      stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+                      stroke={C.line} strokeWidth="1"/>
                     {/* Area fill */}
                     <path d={areaD} fill="url(#goldArea)"/>
                     {/* Line */}
@@ -1043,7 +1036,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                     {/* Last value dot */}
                     <circle cx={xOf(series.length - 1)} cy={yOf(endVal)} r="3.5" fill={C.goldBright}/>
                   </svg>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:8, paddingTop:10, borderTop:`1px solid rgba(255,255,255,0.05)` }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:8, paddingTop:10, borderTop:`1px solid ${C.line}` }}>
                     <div style={{ fontSize:10, color:C.textDark, fontFamily:mono }}>{series[0]?.d} → {series[series.length-1]?.d}</div>
                     <div style={{ fontSize:11, fontFamily:mono, color: chartPct >= 0 ? C.green : C.red }}>
                       {chartPct >= 0 ? "▲" : "▼"} {Math.abs(chartPct).toFixed(1).replace(".",",")}% — {fmtVal(startVal)} → {fmtVal(endVal)}
@@ -1072,7 +1065,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                               <span style={{ fontSize:9, fontFamily:mono, color:C.textDark }}>{pct.toFixed(1).replace(".",",")}%</span>
                             </div>
                           </div>
-                          <div style={{ height:4, background:"rgba(255,255,255,0.05)", borderRadius:2, overflow:"hidden" }}>
+                          <div style={{ height:4, background:C.line, borderRadius:2, overflow:"hidden" }}>
                             <div style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${C.goldBright}, ${C.gold})`, borderRadius:2, transition:"width 0.6s ease" }}/>
                           </div>
                         </div>
@@ -1097,7 +1090,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                             </div>
                           </div>
                           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-                            <div style={{ width:60, height:3, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                            <div style={{ width:60, height:3, background:C.line, borderRadius:2, overflow:"hidden" }}>
                               <div style={{ height:"100%", width:`${score}%`, background: score >= 95 ? C.green : score >= 85 ? C.gold : C.orange, borderRadius:2 }}/>
                             </div>
                             <span style={{ fontSize:9, fontFamily:mono, color:C.goldBright, width:32, textAlign:"right" }}>{score}/100</span>
@@ -1184,13 +1177,13 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
           </div>
         </Modal>
         {/* ─── BOTTOM TAB BAR ─── */}
-        <div style={{ position:"fixed", bottom:0, left:0, right:0, height:56, background:"rgba(8,8,8,0.92)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"stretch", zIndex:100 }}>
+        <div style={{ position:"fixed", bottom:0, left:0, right:0, height:56, background: theme === "light" ? "rgba(244,242,238,0.95)" : "rgba(8,8,8,0.92)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)", borderTop:`1px solid ${C.line}`, display:"flex", alignItems:"stretch", zIndex:100 }}>
           {[["Overzicht","dashboard"],["Wagens","wagens"],["Services","services"],["Berichten","berichten"]].map(([label,id])=>{
             const active = id === "dashboard" ? nav === "dashboard" : nav === id;
             return (
               <div key={id} onClick={()=>setNav(id)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", gap:2, transition:"opacity 0.15s" }}
                 onMouseEnter={e=>e.currentTarget.style.opacity="0.75"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                <span style={{ fontSize:9, letterSpacing:"0.18em", fontFamily:mono, color: active ? "#a0b27e" : "#6a6a64", fontWeight: active ? 500 : 400 }}>{label.toUpperCase()}</span>
+                <span style={{ fontSize:9, letterSpacing:"0.18em", fontFamily:mono, color: active ? C.gold : C.textMuted, fontWeight: active ? 500 : 400 }}>{label.toUpperCase()}</span>
               </div>
             );
           })}
@@ -1214,42 +1207,42 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
         <span style={{ fontFamily:serif, fontSize:22, fontWeight:400, color:C.white, letterSpacing:"0.05em" }}>raù</span>
         <div style={{ display:"flex", alignItems:"center", gap:18 }}>
           {/* Moon icon */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeLinecap="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
           </svg>
           {/* Toggle — decorative dark mode indicator */}
-          <div style={{ width:36, height:20, borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)", position:"relative", cursor:"default" }}>
-            <div style={{ position:"absolute", right:3, top:3, width:14, height:14, borderRadius:"50%", background:"rgba(255,255,255,0.5)" }}/>
+          <div style={{ width:36, height:20, borderRadius:10, background:C.hover, border:`1px solid ${C.line}`, position:"relative", cursor:"default" }}>
+            <div style={{ position:"absolute", right:3, top:3, width:14, height:14, borderRadius:"50%", background:C.textMuted }}/>
           </div>
           {/* Mail icon */}
           <div onClick={()=>setNav("berichten")} style={{ position:"relative", cursor:"pointer" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
             </svg>
             {unread > 0 && <div style={{ position:"absolute", top:-4, right:-4, width:14, height:14, borderRadius:"50%", background:"#c45050", fontSize:8, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:mono }}>{unread}</div>}
           </div>
           {/* Profile icon */}
           <div onClick={()=>setProfileOpen(p=>!p)} style={{ position:"relative", cursor:"pointer" }}>
-            <div style={{ width:32, height:32, borderRadius:"50%", border:"1.5px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(255,255,255,0.04)" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round">
+            <div style={{ width:32, height:32, borderRadius:"50%", border:`1.5px solid ${C.line}`, display:"flex", alignItems:"center", justifyContent:"center", background:C.hover }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.text} strokeWidth="1.5" strokeLinecap="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
               </svg>
             </div>
             {/* Profile dropdown */}
             {profileOpen && (
-              <div style={{ position:"absolute", top:40, right:0, width:220, background:"rgba(18,18,18,0.97)", border:`1px solid rgba(255,255,255,0.08)`, borderRadius:12, padding:"14px 0", zIndex:200, backdropFilter:"blur(20px)", boxShadow:"0 20px 60px rgba(0,0,0,0.6)" }}>
-                <div style={{ padding:"8px 18px 14px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ position:"absolute", top:40, right:0, width:220, background: theme === "light" ? "rgba(255,255,255,0.98)" : "rgba(18,18,18,0.97)", border:`1px solid ${C.panelBorder}`, borderRadius:12, padding:"14px 0", zIndex:200, backdropFilter:"blur(20px)", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+                <div style={{ padding:"8px 18px 14px", borderBottom:`1px solid ${C.line}` }}>
                   <div style={{ fontSize:13, color:C.white }}>{client?.name || user?.email}</div>
                   <div style={{ fontSize:10, color:C.textDark, fontFamily:mono, marginTop:3 }}>{client?.tier ? `${client.tier} klant` : "Klant"}</div>
                 </div>
                 {[["⬡","Mijn Wagens","wagens"],["○","Services","services"],["□","Facturen","facturen"],["✉","Berichten","berichten"]].map(([icon,label,id])=>(
                   <div key={id} onClick={()=>{ setNav(id); setProfileOpen(false); }} style={{ padding:"10px 18px", fontSize:13, color:C.textMuted, cursor:"pointer", display:"flex", alignItems:"center", gap:12, transition:"all 0.15s" }}
-                    onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.04)";e.currentTarget.style.color=C.white}}
+                    onMouseEnter={e=>{e.currentTarget.style.background=C.hover;e.currentTarget.style.color=C.white}}
                     onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=C.textMuted}}>
                     <span style={{ opacity:0.4, fontSize:13 }}>{icon}</span>{label}
                   </div>
                 ))}
-                <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", marginTop:4 }}>
+                <div style={{ borderTop:`1px solid ${C.line}`, marginTop:4 }}>
                   <div onClick={onSignOut} style={{ padding:"10px 18px", fontSize:13, color:"#c45050", cursor:"pointer", transition:"all 0.15s" }}
                     onMouseEnter={e=>e.currentTarget.style.background="rgba(196,80,80,0.06)"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
@@ -1272,7 +1265,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
             <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
               <div style={{ textAlign:"center" }}>
                 <div style={{ fontSize:60, opacity:0.05 }}>◻</div>
-                <div style={{ fontSize:11, color:"rgba(255,255,255,0.12)", fontFamily:mono, letterSpacing:"0.2em", marginTop:10 }}>GEEN AFBEELDING</div>
+                <div style={{ fontSize:11, color:C.textDark, fontFamily:mono, letterSpacing:"0.2em", marginTop:10 }}>GEEN AFBEELDING</div>
               </div>
             </div>
             {imageUrl && (
@@ -1284,9 +1277,13 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
                 {/* Cinematografische behandeling: verloop boven/onder + vignette unificeert de uiteenlopende
                     bronfoto's, verbetert leesbaarheid en doezelt hoek-watermerken/achtergronden weg. */}
                 <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-                  background:"linear-gradient(to bottom, rgba(8,8,8,0.6) 0%, rgba(8,8,8,0) 24%, rgba(8,8,8,0) 52%, rgba(8,8,8,0.92) 100%)" }} />
+                  background: theme === "light"
+                    ? "linear-gradient(to bottom, rgba(244,242,238,0.6) 0%, rgba(244,242,238,0) 24%, rgba(244,242,238,0) 52%, rgba(244,242,238,0.92) 100%)"
+                    : "linear-gradient(to bottom, rgba(8,8,8,0.6) 0%, rgba(8,8,8,0) 24%, rgba(8,8,8,0) 52%, rgba(8,8,8,0.92) 100%)" }} />
                 <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-                  background:"radial-gradient(125% 95% at 50% 42%, rgba(8,8,8,0) 52%, rgba(8,8,8,0.78) 100%)" }} />
+                  background: theme === "light"
+                    ? "radial-gradient(125% 95% at 50% 42%, rgba(244,242,238,0) 52%, rgba(244,242,238,0.78) 100%)"
+                    : "radial-gradient(125% 95% at 50% 42%, rgba(8,8,8,0) 52%, rgba(8,8,8,0.78) 100%)" }} />
               </>
             )}
           </>
@@ -1299,7 +1296,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
               <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
                 <div style={{ textAlign:"center" }}>
                   <div style={{ fontSize:60, opacity:0.05 }}>⬡</div>
-                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.12)", fontFamily:mono, letterSpacing:"0.2em", marginTop:10 }}>GEEN 3D MODEL</div>
+                  <div style={{ fontSize:11, color:C.textDark, fontFamily:mono, letterSpacing:"0.2em", marginTop:10 }}>GEEN 3D MODEL</div>
                 </div>
               </div>
             )}
@@ -1307,8 +1304,8 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
         )}
 
         {/* Subtle vignette */}
-        <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:2, background:"radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(8,8,8,0.55) 100%)" }}/>
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:160, background:"linear-gradient(transparent, rgba(8,8,8,0.9))", pointerEvents:"none", zIndex:2 }}/>
+        <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:2, background: theme === "light" ? "radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(244,242,238,0.4) 100%)" : "radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(8,8,8,0.55) 100%)" }}/>
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:160, background: theme === "light" ? "linear-gradient(transparent, rgba(244,242,238,0.9))" : "linear-gradient(transparent, rgba(8,8,8,0.9))", pointerEvents:"none", zIndex:2 }}/>
 
         {/* Welcome text — top left */}
         <div style={{ position:"absolute", top:28, left:36, zIndex:5, animation:"fadeUp 0.7s ease both" }}>
@@ -1320,7 +1317,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
         {/* Value — top right */}
         {vehicle?.value > 0 && (
           <div style={{ position:"absolute", top:28, right:36, zIndex:5, textAlign:"right", animation:"fadeUp 0.7s ease 0.1s both" }}>
-            <div style={{ fontSize:9, letterSpacing:"0.25em", color:"rgba(255,255,255,0.35)", fontFamily:mono, marginBottom:4 }}>WAARDE</div>
+            <div style={{ fontSize:9, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:4 }}>WAARDE</div>
             <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"flex-end" }}>
               <div style={{ width:0, height:0, borderLeft:"5px solid transparent", borderRight:"5px solid transparent", borderBottom:`7px solid ${C.gold}`, marginBottom:2 }}/>
               <span style={{ fontSize:24, color:C.white, fontFamily:sans, fontWeight:300 }}>{fmtVal(vehicle.value)}</span>
@@ -1330,7 +1327,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
         {/* Car name — bottom left */}
         <div style={{ position:"absolute", bottom:24, left:36, zIndex:5, animation:"fadeUp 0.7s ease 0.15s both" }}>
-          <div style={{ fontSize:10, letterSpacing:"0.3em", color:"rgba(255,255,255,0.3)", fontFamily:mono, marginBottom:6 }}>IN FOCUS</div>
+          <div style={{ fontSize:10, letterSpacing:"0.3em", color:C.textMuted, fontFamily:mono, marginBottom:6 }}>IN FOCUS</div>
           <div style={{ fontSize:36, fontFamily:serif, fontWeight:400, color:C.white, lineHeight:1, marginBottom:10 }}>
             {brandName} {modelName || "—"}
           </div>
@@ -1339,17 +1336,17 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
         {/* Action buttons — bottom right */}
         <div style={{ position:"absolute", bottom:28, right:36, zIndex:5, display:"flex", gap:10 }}>
-          <div onClick={()=>setNav("wagens")} title="Mijn wagens" style={{ width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.2s" }}
-            onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.1)"}}
-            onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.05)"}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5">
+          <div onClick={()=>setNav("wagens")} title="Mijn wagens" style={{ width:38,height:38,borderRadius:"50%",background:C.hover,border:`1px solid ${C.line}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.2s" }}
+            onMouseEnter={e=>{e.currentTarget.style.background=C.surface}}
+            onMouseLeave={e=>{e.currentTarget.style.background=C.hover}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="1.5">
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
             </svg>
           </div>
-          <div onClick={()=>setNav("services")} title="Services" style={{ width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.2s" }}
-            onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.1)"}}
-            onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.05)"}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round">
+          <div onClick={()=>setNav("services")} title="Services" style={{ width:38,height:38,borderRadius:"50%",background:C.hover,border:`1px solid ${C.line}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.2s" }}
+            onMouseEnter={e=>{e.currentTarget.style.background=C.surface}}
+            onMouseLeave={e=>{e.currentTarget.style.background=C.hover}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round">
               <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/>
             </svg>
           </div>
@@ -1359,7 +1356,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
         {vehicles.length > 1 && (
           <div style={{ position:"absolute", bottom:28, left:"50%", transform:"translateX(-50%)", zIndex:5, display:"flex", gap:8, alignItems:"center" }}>
             {vehicles.map((_, i) => (
-              <div key={i} onClick={()=>setCarIdx(i)} style={{ width: i===carIdx ? 20 : 6, height:6, borderRadius:3, background: i===carIdx ? C.gold : "rgba(255,255,255,0.2)", cursor:"pointer", transition:"all 0.3s" }}/>
+              <div key={i} onClick={()=>setCarIdx(i)} style={{ width: i===carIdx ? 20 : 6, height:6, borderRadius:3, background: i===carIdx ? C.gold : C.textDark, cursor:"pointer", transition:"all 0.3s" }}/>
             ))}
           </div>
         )}
@@ -1387,13 +1384,13 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
         {/* INFO */}
         <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:12, padding:"18px 22px", display:"flex", flexDirection:"column", gap:10, overflow:"hidden" }}>
-          <div style={{ fontSize:9, letterSpacing:"0.28em", color:"rgba(255,255,255,0.25)", fontFamily:mono }}>INFO</div>
+          <div style={{ fontSize:9, letterSpacing:"0.28em", color:C.textDark, fontFamily:mono }}>INFO</div>
           <div style={{ display:"flex", alignItems:"baseline", gap:10, flexWrap:"wrap" }}>
             <span style={{ fontSize:18, color:C.white, fontFamily:mono, fontWeight:400 }}>{vehicle?.plate || "—"}</span>
             {vehicle?.color && (
               <div style={{ display:"flex", gap:4, alignItems:"center" }}>
-                <div style={{ width:7, height:7, borderRadius:"50%", background:"rgba(255,255,255,0.25)" }}/>
-                <div style={{ width:7, height:7, borderRadius:"50%", background:"rgba(255,255,255,0.15)" }}/>
+                <div style={{ width:7, height:7, borderRadius:"50%", background:C.textDark }}/>
+                <div style={{ width:7, height:7, borderRadius:"50%", background:C.textDark }}/>
               </div>
             )}
             <span style={{ fontSize:14, color:C.textMuted, fontFamily:mono }}>{vehicle?.mileage || "—"}</span>
@@ -1410,7 +1407,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
         {/* VANDAAG */}
         <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:12, padding:"18px 22px", display:"flex", flexDirection:"column", justifyContent:"space-between", overflow:"hidden" }}>
-          <div style={{ fontSize:9, letterSpacing:"0.28em", color:"rgba(255,255,255,0.25)", fontFamily:mono, marginBottom:8 }}>VANDAAG</div>
+          <div style={{ fontSize:9, letterSpacing:"0.28em", color:C.textDark, fontFamily:mono, marginBottom:8 }}>VANDAAG</div>
           {activeService ? (
             <>
               <div>
@@ -1442,7 +1439,7 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
 
         {/* PLANNING */}
         <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:12, padding:"18px 22px", display:"flex", flexDirection:"column", gap:10, overflowY:"auto" }}>
-          <div style={{ fontSize:9, letterSpacing:"0.28em", color:"rgba(255,255,255,0.25)", fontFamily:mono }}>PLANNING</div>
+          <div style={{ fontSize:9, letterSpacing:"0.28em", color:C.textDark, fontFamily:mono }}>PLANNING</div>
           {plannedServices.length === 0 ? (
             <div style={{ fontSize:12, color:C.textDark }}>Geen geplande services</div>
           ) : (
@@ -1450,10 +1447,10 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
               const { day, month } = nlMonth(s.date);
               return (
                 <div key={s.id} style={{ display:"flex", gap:14, alignItems:"flex-start", marginBottom: i < plannedServices.length-1 ? 6 : 0 }}>
-                  <div style={{ fontSize:30, color:"rgba(255,255,255,0.12)", fontWeight:300, fontFamily:mono, lineHeight:1, minWidth:32, textAlign:"right", flexShrink:0 }}>{day}</div>
+                  <div style={{ fontSize:30, color:C.textDark, fontWeight:300, fontFamily:mono, lineHeight:1, minWidth:32, textAlign:"right", flexShrink:0 }}>{day}</div>
                   <div>
                     <div style={{ fontSize:13, color:C.white, fontWeight:400 }}>{month}</div>
-                    <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:1 }}>{s.type}</div>
+                    <div style={{ fontSize:11, color:C.textMuted, marginTop:1 }}>{s.type}</div>
                   </div>
                 </div>
               );
@@ -1463,13 +1460,13 @@ export default function ClientPortal({ user, clientId, onSignOut }) {
       </div>
 
       {/* ─── BOTTOM TAB BAR ─── */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, height:56, background:"rgba(8,8,8,0.92)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"stretch", zIndex:100 }}>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, height:56, background: theme === "light" ? "rgba(244,242,238,0.95)" : "rgba(8,8,8,0.92)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)", borderTop:`1px solid ${C.line}`, display:"flex", alignItems:"stretch", zIndex:100 }}>
         {[["Overzicht","dashboard"],["Wagens","wagens"],["Services","services"],["Berichten","berichten"]].map(([label,id])=>{
           const active = id === "dashboard" ? nav === "dashboard" : nav === id;
           return (
             <div key={id} onClick={()=>setNav(id)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", gap:2, transition:"opacity 0.15s" }}
               onMouseEnter={e=>e.currentTarget.style.opacity="0.75"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-              <span style={{ fontSize:9, letterSpacing:"0.18em", fontFamily:mono, color: active ? "#a0b27e" : "#6a6a64", fontWeight: active ? 500 : 400 }}>{label.toUpperCase()}</span>
+              <span style={{ fontSize:9, letterSpacing:"0.18em", fontFamily:mono, color: active ? C.gold : C.textMuted, fontWeight: active ? 500 : 400 }}>{label.toUpperCase()}</span>
             </div>
           );
         })}
