@@ -9,6 +9,7 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabase";
 import { DARK, LIGHT } from "./demo/theme";
+import { seedData } from "./demo/seed";
 
 /* ═══════════════════════════════════════════
    DESIGN TOKENS
@@ -16,6 +17,7 @@ import { DARK, LIGHT } from "./demo/theme";
 let C = DARK;
 const mono = "'JetBrains Mono', monospace";
 const sans = "'Outfit', sans-serif";
+const serif = "'Cormorant Garamond', serif";
 
 /* ═══════════════════════════════════════════
    MOCK DATA
@@ -1042,250 +1044,330 @@ export default function AdminDashboard({ user, onSignOut, theme, setTheme }) {
   const getClient = (cid) => dbClients.find(c => c.id === cid);
 
   /* ═══ DASHBOARD ═══ */
-  const dashVehicle = allVehicles[dashCarIdx % allVehicles.length];
-  const dashLinkedModel = dashVehicle ? getLinkedModel(dashVehicle.id) : null;
-  const dashBrand = dashLinkedModel ? getLinkedBrand(dashLinkedModel) : null;
-  const dashDisplayName = dashLinkedModel ? `${dashBrand?.name || ""} ${dashLinkedModel.name}` : `${dashVehicle?.make || ""} ${dashVehicle?.name || ""}`;
 
-  const renderDashboard = () => (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.bg, overflowY: "auto" }}>
+  const renderDashboard = () => {
+    // ── Derived KPI data ──────────────────────────────────────────────────
+    const allVehDash = dbVehicles.length > 0 ? dbVehicles : seedData.vehicles;
+    const aumTotal = allVehDash.reduce((s, v) => s + (v.current_value ?? v.value ?? 0), 0);
 
-      {/* ─── KPI STRIP ─── */}
-      <div style={{ flexShrink: 0, padding: isMobile ? "16px 16px 0" : "56px 28px 0", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 10 : 14 }}>
-        {[
-          { label: "ACTIEVE KLANTEN", value: activeClients, color: C.green },
-          { label: "MAANDELIJKSE OMZET", value: `€ ${monthlyRevenue.toLocaleString("nl-BE")}`, color: C.gold },
-          { label: "OPENSTAANDE SERVICES", value: pendingServices, color: C.blue },
-          { label: "ONGELEZEN BERICHTEN", value: unreadMessages, color: unreadMessages > 0 ? C.red : C.textMuted },
-        ].map((kpi, i) => (
-          <div key={i} style={{
-            background: C.panel, border: `1px solid ${C.panelBorder}`,
-            borderRadius: 6, padding: isMobile ? "14px 16px" : "16px 20px",
-          }}>
-            <div style={{ fontSize: 8, fontFamily: mono, letterSpacing: "0.22em", color: C.textDark, marginBottom: 8, textTransform: "uppercase" }}>{kpi.label}</div>
-            <div style={{ fontSize: isMobile ? 22 : 28, fontFamily: "'Cormorant Garamond', serif", fontWeight: 500, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
+    const kpiInv = dbInvoices.length > 0 ? dbInvoices : seedData.invoices;
+    const pendingAmt  = kpiInv.filter(i => i.status === "pending").reduce((s, i) => s + (i.amount ?? 0), 0);
+    const overdueAmt  = kpiInv.filter(i => i.status === "overdue").reduce((s, i) => s + (i.amount ?? 0), 0);
+    const pendingCnt  = kpiInv.filter(i => i.status === "pending").length;
+    const overdueCnt  = kpiInv.filter(i => i.status === "overdue").length;
+
+    const kpiSvc = dbServices.length > 0 ? dbServices : seedData.services;
+    const svcScheduled   = kpiSvc.filter(s => s.status === "scheduled").length;
+    const svcInProgress  = kpiSvc.filter(s => s.status === "in-progress").length;
+    const svcCompleted   = kpiSvc.filter(s => s.status === "completed").length;
+
+    const kpiCli = dbClients.length > 0 ? dbClients : seedData.clients;
+    const tierCounts = kpiCli.reduce((acc, c) => { acc[c.tier] = (acc[c.tier] || 0) + 1; return acc; }, {});
+
+    const typeCounts = kpiSvc.reduce((acc, s) => { acc[s.type] = (acc[s.type] || 0) + 1; return acc; }, {});
+    const typeEntries = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+    const maxTypeCount = typeEntries[0]?.[1] || 1;
+
+    const kpiTeam = dbTeam.length > 0 ? dbTeam : seedData.team;
+
+    const statusCounts = allVehDash.reduce((acc, v) => { acc[v.status] = (acc[v.status] || 0) + 1; return acc; }, {});
+    const brandCounts  = (() => {
+      const bc = {};
+      allVehDash.forEach(v => {
+        const brand = v.models?.brands?.name ?? v.models?.name?.split(" ")[0] ?? "Overig";
+        bc[brand] = (bc[brand] || 0) + 1;
+      });
+      return Object.entries(bc).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    })();
+
+    const upcoming = [...kpiSvc]
+      .filter(s => s.status === "scheduled" || s.status === "in-progress")
+      .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+      .slice(0, 4)
+      .map(s => {
+        const cname = s.clients?.name ?? kpiCli.find(c => c.id === s.client_id)?.name ?? "—";
+        return { ...s, clientName: cname };
+      });
+
+    const revHistory = seedData.revenueHistory;
+    const revLast = revHistory[revHistory.length - 1];
+    const revPrev = revHistory[revHistory.length - 2];
+    const revLastTotal = (revLast?.recurring ?? 0) + (revLast?.service ?? 0);
+    const revPrevTotal = (revPrev?.recurring ?? 0) + (revPrev?.service ?? 0);
+    const revGrowth = revPrevTotal > 0 ? Math.round(((revLastTotal - revPrevTotal) / revPrevTotal) * 100) : 0;
+
+    const chartW = 560, chartH = 110, chartPadB = 20;
+    const barW = Math.floor((chartW) / revHistory.length) - 3;
+    const maxRev = Math.max(...revHistory.map(r => r.recurring + r.service)) || 1;
+    const barHeight = (val) => Math.max(1, Math.round((val / maxRev) * (chartH - chartPadB)));
+
+    const tiers = ["Collection", "Signature", "Essential"];
+    const maxTier = Math.max(...tiers.map(t => tierCounts[t] || 0), 1);
+
+    const statusLabel = { "garaged": "In stalling", "in-service": "In service", "pickup-scheduled": "Afhaling gepland" };
+
+    const card = (extra = {}) => ({
+      background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 6,
+      padding: isMobile ? "16px 18px" : "20px 22px", ...extra,
+    });
+    const cardLabel = { fontSize: 9, fontFamily: mono, letterSpacing: "0.25em", color: C.textDark, textTransform: "uppercase", marginBottom: 14 };
+    const bigNum = (col) => ({ fontSize: isMobile ? 24 : 30, fontFamily: serif, fontWeight: 500, color: col, lineHeight: 1 });
+
+    return (
+      <div style={{ background: C.bg, overflowY: "auto", height: "100%", padding: isMobile ? "16px 14px 28px" : "56px 28px 36px" }}>
+
+        {/* PAGE HEADER */}
+        <div style={{ marginBottom: isMobile ? 18 : 22, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 9, fontFamily: mono, letterSpacing: "0.3em", color: C.textDark, marginBottom: 4 }}>RAÚ CONCIERGE</div>
+            <div style={{ fontSize: isMobile ? 18 : 22, fontFamily: serif, color: C.white, fontWeight: 400, letterSpacing: "0.02em" }}>Operations Dashboard</div>
           </div>
-        ))}
-      </div>
+          <div style={{ fontSize: 9, fontFamily: mono, color: C.textDark, letterSpacing: "0.15em" }}>
+            ZONDAG 29 JUNI 2026
+          </div>
+        </div>
 
-      {/* ─── 3D HERO — contained panel ─── */}
-      <div style={{ flexShrink: 0, padding: isMobile ? "12px 16px 0" : "16px 28px 0" }}>
-        <div style={{ position: "relative", height: isMobile ? 260 : 340, maxHeight: 380, border: `1px solid ${C.panelBorder}`, borderRadius: 8, overflow: "hidden", background: C.bg }}>
-        <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
-
-        {/* Vignette overlay */}
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3,
-          background: "radial-gradient(ellipse at 60% 50%, transparent 30%, rgba(0,0,0,0.6) 100%)" }} />
-        {/* Bottom fade */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 200,
-          background: "linear-gradient(transparent, rgba(10,10,10,0.95))", pointerEvents: "none", zIndex: 4 }} />
-        {/* Top fade */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 100,
-          background: "linear-gradient(rgba(10,10,10,0.5), transparent)", pointerEvents: "none", zIndex: 4 }} />
-
-        {/* No 3D model placeholder */}
-        {no3DModel && (
-          <div style={{ position: "absolute", inset: 0, zIndex: 6, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, pointerEvents: "none" }}>
-            <div style={{ fontSize: 48, opacity: 0.1, color: C.white }}>⬡</div>
-            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.25)", letterSpacing: "0.2em" }}>GEEN 3D MODEL</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", textAlign: "center", maxWidth: 300 }}>
-              Koppel dit voertuig aan een model via Fleet
+        {/* KPI STRIP */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 14 : 18 }}>
+          {[
+            { label: "ACTIEVE KLANTEN",    value: activeClients,                                 color: C.green },
+            { label: "MAANDELIJKSE OMZET", value: `€ ${monthlyRevenue.toLocaleString("nl-BE")}`, color: C.gold },
+            { label: "BEHEERDE WAARDE",    value: fmtEuro(aumTotal),                             color: C.goldBright },
+            { label: "OPEN SERVICES",      value: svcScheduled + svcInProgress,                  color: C.blue },
+            { label: "ONGELEZEN BERICHTEN",value: unreadMessages, color: unreadMessages > 0 ? C.red : C.textMuted },
+          ].map((kpi, i) => (
+            <div key={i} style={card()}>
+              <div style={cardLabel}>{kpi.label}</div>
+              <div style={bigNum(kpi.color)}>{kpi.value}</div>
             </div>
-          </div>
-        )}
-
-        {/* ── Top bar overlay ── */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, padding: isMobile ? "20px 20px" : "28px 36px",
-          display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          {/* Left: hamburger (mobile/tablet only) + logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 16 : 24 }}>
-            {/* Hamburger — hidden on desktop (persistent sidebar) */}
-            {!isDesktop && (
-              <div onClick={() => setMobileMenuOpen(true)} style={{
-                width: 40, height: 40, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                transition: "all 0.2s", background: "rgba(255,255,255,0.02)",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
-              >
-                <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                  <line x1="0" y1="1" x2="16" y2="1" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
-                  <line x1="0" y1="6" x2="16" y2="6" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
-                  <line x1="0" y1="11" x2="16" y2="11" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
-                </svg>
-              </div>
-            )}
-            {/* Logo */}
-            <span style={{ fontSize: isMobile ? 20 : 26, fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, color: C.white, letterSpacing: "0.06em" }}>raù</span>
-          </div>
-
-          {/* Right: icons */}
-          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
-            {[
-              { icon: "☾", label: "Dark mode" },
-              { icon: "✉", label: "Berichten", notif: unreadMessages > 0 },
-              { icon: "○", label: "Profiel", isProfile: true },
-            ].map((btn, i) => (
-              <div key={i} onClick={() => { if (btn.label === "Berichten") setNav("messages"); if (btn.isProfile) setMobileMenuOpen(true); }} style={{
-                width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)",
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                transition: "all 0.2s", position: "relative", fontSize: 15,
-                color: C.textMuted, background: "rgba(255,255,255,0.02)",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
-              >
-                {btn.icon}
-                {btn.notif && <div style={{ position: "absolute", top: 6, right: 6, width: 6, height: 6, borderRadius: "50%", background: C.red }} />}
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
 
-        {/* Welcome text — below top bar */}
-        <div style={{ position: "absolute", top: isMobile ? 80 : 90, left: isMobile ? 20 : 36, zIndex: 10 }}>
-          <div style={{ fontSize: isMobile ? 24 : 36, color: C.white, fontWeight: 300, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
-            Welkom terug, Maarten
-          </div>
-        </div>
+        {/* MAIN GRID */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 12 : 14 }}>
 
-        {/* Value — top right below icons */}
-        <div style={{ position: "absolute", top: isMobile ? 80 : 90, right: isMobile ? 20 : 36, zIndex: 10, textAlign: "right" }}>
-          <div style={{ fontSize: 10, letterSpacing: "0.25em", color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>WAARDE</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7a9e6a" }} />
-            <span style={{ fontSize: isMobile ? 20 : 28, color: C.white, fontWeight: 300, fontFamily: mono, letterSpacing: "-0.02em" }}>
-              € {dashVehicle?.value ? dashVehicle.value.toLocaleString("nl-BE") : "0"}
-            </span>
-          </div>
-        </div>
-
-        {/* ── Bottom overlay — car info ── */}
-        <div style={{ position: "absolute", bottom: 70, left: 0, right: 0, zIndex: 10, padding: isMobile ? "0 20px" : "0 36px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            {/* Left: car name */}
-            <div>
-              <div style={{ fontSize: 10, letterSpacing: "0.35em", color: "rgba(255,255,255,0.35)", fontWeight: 400, marginBottom: 6 }}>IN FOCUS</div>
-              <div style={{ fontSize: isMobile ? 22 : 34, color: C.white, fontWeight: 300, letterSpacing: "-0.01em", lineHeight: 1.1 }}>
-                {dashDisplayName.trim() || "Selecteer een voertuig"}
-              </div>
-              <div style={{ marginTop: 10 }}><StatusBadge status={dashVehicle?.status || "garaged"} /></div>
-            </div>
-
-            {/* Right: nav arrows */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {allVehicles.length > 1 && (
-                <div style={{ display: "flex", gap: 6 }}>
-                  <div onClick={() => setDashCarIdx(i => (i - 1 + allVehicles.length) % allVehicles.length)} style={{
-                    width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
-                    display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                    color: C.textMuted, fontSize: 16, transition: "all 0.2s", background: C.hover,
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
-                  >‹</div>
-                  <div onClick={() => setDashCarIdx(i => (i + 1) % allVehicles.length)} style={{
-                    width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.12)",
-                    display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                    color: C.textMuted, fontSize: 16, transition: "all 0.2s", background: C.hover,
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"}
-                  >›</div>
+          {/* OMZET-EVOLUTIE — full width */}
+          <div style={{ ...card(), gridColumn: isMobile ? "1" : "1 / -1" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <div style={cardLabel}>OMZET-EVOLUTIE — LAATSTE 12 MAANDEN</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <span style={bigNum(C.gold)}>{`€ ${revLastTotal.toLocaleString("nl-BE")}`}</span>
+                  <span style={{ fontSize: 11, fontFamily: mono, color: revGrowth >= 0 ? C.green : C.red }}>
+                    {revGrowth >= 0 ? "+" : ""}{revGrowth}% vs vorige maand
+                  </span>
                 </div>
-              )}
+              </div>
+              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 1, background: C.gold }} />
+                  <span style={{ fontSize: 9, fontFamily: mono, color: C.textMuted, letterSpacing: "0.15em" }}>ABONNEMENT</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 1, background: C.blue }} />
+                  <span style={{ fontSize: 9, fontFamily: mono, color: C.textMuted, letterSpacing: "0.15em" }}>SERVICE</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block", minWidth: isMobile ? 320 : "auto" }}>
+                {revHistory.map((r, i) => {
+                  const x = i * (barW + 3);
+                  const recH = barHeight(r.recurring);
+                  const svcH = barHeight(r.service);
+                  const totalH = recH + svcH;
+                  const yBase = chartH - chartPadB;
+                  return (
+                    <g key={r.month}>
+                      <rect x={x} y={yBase - totalH} width={barW} height={svcH} fill={C.blue} opacity="0.7" rx="1" />
+                      <rect x={x} y={yBase - recH} width={barW} height={recH} fill={C.gold} opacity="0.85" rx="1" />
+                      <text x={x + barW / 2} y={chartH - 4} textAnchor="middle" fontSize="7" fontFamily={mono} fill={C.textDark}>
+                        {r.month.slice(5)}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
             </div>
           </div>
-        </div>
 
-        </div>{/* end contained hero panel */}
-      </div>{/* end hero padding wrapper */}
-
-      {/* ─── BOTTOM INFO CARDS ─── */}
-      <div style={{ flex: "0 0 auto", padding: isMobile ? "12px 16px 20px" : "16px 28px 28px", background: "transparent" }}>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 12 : 16 }}>
-
-          {/* INFO card */}
-          <div style={{
-            background: "rgba(100,130,170,0.12)", border: "1px solid rgba(120,150,190,0.15)",
-            borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(50px) saturate(1.3)", WebkitBackdropFilter: "blur(50px) saturate(1.3)",
-            boxShadow: "0 4px 30px rgba(0,10,30,0.4), inset 0 1px 0 rgba(140,170,210,0.06)",
-          }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>INFO</div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-              <span style={{ fontSize: 15, color: C.white, fontFamily: mono, fontWeight: 400 }}>{dashVehicle?.plate || "—"}</span>
-              <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", fontFamily: mono }}>{dashVehicle?.mileage || "0 km"}</span>
-            </div>
-            <div style={{ height: 1, background: C.line, marginBottom: 14 }} />
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 14 }}>{dashVehicle?.color || "—"}</div>
-            <div style={{ height: 1, background: C.line, marginBottom: 14 }} />
-            <div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4 }}>Eigenaar</div>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{dashVehicle?.clientName || "—"}</div>
-            </div>
-          </div>
-
-          {/* VANDAAG card */}
-          <div style={{
-            background: "rgba(100,130,170,0.12)", border: "1px solid rgba(120,150,190,0.15)",
-            borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(50px) saturate(1.3)", WebkitBackdropFilter: "blur(50px) saturate(1.3)",
-            boxShadow: "0 4px 30px rgba(0,10,30,0.4), inset 0 1px 0 rgba(140,170,210,0.06)",
-          }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>VANDAAG</div>
-            {dbServices.filter(s => s.status === "in-progress" || s.status === "scheduled").slice(0, 2).map(s => {
-              const sv = getVehicle(s.vehicle_id);
+          {/* SERVICES-PIJPLIJN */}
+          <div style={card()}>
+            <div style={cardLabel}>SERVICES-PIJPLIJN</div>
+            {[
+              { label: "Gepland",       count: svcScheduled,  color: C.blue,   bg: C.blueBg },
+              { label: "In uitvoering", count: svcInProgress, color: C.orange, bg: C.orangeBg },
+              { label: "Voltooid",      count: svcCompleted,  color: C.green,  bg: C.greenBg },
+            ].map((row, i) => {
+              const total = svcScheduled + svcInProgress + svcCompleted || 1;
+              const pct = Math.round((row.count / total) * 100);
               return (
-                <Hov key={s.id} onClick={() => setSelectedService(s)} style={{ padding: "10px 0", borderBottom: `1px solid ${C.line}`, marginBottom: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <span style={{ fontSize: 14, color: C.white, fontWeight: 400 }}>{s.type}</span>
-                    <StatusBadge status={s.status} />
+                <div key={i} style={{ marginBottom: i < 2 ? 14 : 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                    <span style={{ fontSize: 11, color: C.text, fontFamily: sans }}>{row.label}</span>
+                    <span style={{ fontSize: 12, color: row.color, fontFamily: mono, fontWeight: 600 }}>{row.count}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: C.textMuted }}>{sv?.make} {sv?.name}</div>
-                </Hov>
+                  <div style={{ height: 4, borderRadius: 2, background: C.surface }}>
+                    <div style={{ height: "100%", borderRadius: 2, width: `${pct}%`, background: row.color, opacity: 0.8 }} />
+                  </div>
+                </div>
               );
             })}
-            {dbServices.filter(s => s.status === "in-progress" || s.status === "scheduled").length === 0 && (
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", padding: "12px 0" }}>Geen geplande services</div>
-            )}
-            <div onClick={() => setNewServiceOpen(true)} style={{
-              marginTop: 10, padding: "10px 16px", border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: 6, fontSize: 11, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em",
-              cursor: "pointer", textAlign: "center", transition: "all 0.2s",
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = C.white; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
-            >+ AFSPRAAK PLANNEN</div>
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.panelBorder}` }}>
+              <div style={{ fontSize: 9, fontFamily: mono, letterSpacing: "0.15em", color: C.textDark, marginBottom: 6 }}>TOTAAL</div>
+              <div style={{ fontSize: 18, fontFamily: serif, color: C.text }}>{svcScheduled + svcInProgress + svcCompleted}</div>
+            </div>
           </div>
 
-          {/* PLANNING card */}
-          <div style={{
-            background: "rgba(100,130,170,0.12)", border: "1px solid rgba(120,150,190,0.15)",
-            borderRadius: 14, padding: isMobile ? "18px 20px" : "22px 26px",
-            backdropFilter: "blur(50px) saturate(1.3)", WebkitBackdropFilter: "blur(50px) saturate(1.3)",
-            boxShadow: "0 4px 30px rgba(0,10,30,0.4), inset 0 1px 0 rgba(140,170,210,0.06)",
-          }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", fontWeight: 400, marginBottom: 16 }}>PLANNING</div>
-            {[
-              { day: "6", month: "Juni", desc: "Hasselt Élégance — GT Tour" },
-              { day: "14", month: "Augustus", desc: "Vakantie Malediven" },
-              { day: "22", month: "September", desc: "Jaarlijkse inspectie" },
-            ].map((ev, i) => (
-              <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: i < 2 ? 16 : 0 }}>
-                <div style={{ fontSize: 28, color: "rgba(255,255,255,0.15)", fontWeight: 300, fontFamily: mono, lineHeight: 1, minWidth: 36, textAlign: "right" }}>{ev.day}</div>
-                <div>
-                  <div style={{ fontSize: 14, color: C.white, fontWeight: 400 }}>{ev.month}</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{ev.desc}</div>
+          {/* OPENSTAANDE FACTURATIE */}
+          <div style={card()}>
+            <div style={cardLabel}>OPENSTAANDE FACTURATIE</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+              <div style={{ padding: "12px 14px", background: C.blueBg, border: `1px solid ${C.blue}30`, borderRadius: 4 }}>
+                <div style={{ fontSize: 8, fontFamily: mono, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>PENDING</div>
+                <div style={{ fontSize: 20, fontFamily: serif, color: C.blue }}>{fmtEuro(pendingAmt)}</div>
+                <div style={{ fontSize: 9, color: C.textMuted, fontFamily: mono, marginTop: 4 }}>{pendingCnt} facturen</div>
+              </div>
+              <div style={{ padding: "12px 14px", background: C.redBg, border: `1px solid ${C.red}30`, borderRadius: 4 }}>
+                <div style={{ fontSize: 8, fontFamily: mono, letterSpacing: "0.2em", color: C.textDark, marginBottom: 6 }}>ACHTERSTALLIG</div>
+                <div style={{ fontSize: 20, fontFamily: serif, color: C.red }}>{fmtEuro(overdueAmt)}</div>
+                <div style={{ fontSize: 9, color: C.textMuted, fontFamily: mono, marginTop: 4 }}>{overdueCnt} facturen</div>
+              </div>
+            </div>
+            <div style={{ paddingTop: 12, borderTop: `1px solid ${C.panelBorder}` }}>
+              <div style={{ fontSize: 9, fontFamily: mono, letterSpacing: "0.15em", color: C.textDark, marginBottom: 6 }}>TOTAAL OPENSTAAND</div>
+              <div style={{ fontSize: 22, fontFamily: serif, color: C.gold }}>{fmtEuro(pendingAmt + overdueAmt)}</div>
+            </div>
+          </div>
+
+          {/* KLANTEN PER TIER */}
+          <div style={card()}>
+            <div style={cardLabel}>KLANTEN PER TIER</div>
+            {tiers.map((tier, i) => {
+              const cnt = tierCounts[tier] || 0;
+              const pct = Math.round((cnt / maxTier) * 100);
+              const col = tier === "Collection" ? C.gold : tier === "Signature" ? C.blue : C.green;
+              return (
+                <div key={tier} style={{ marginBottom: i < tiers.length - 1 ? 14 : 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                    <span style={{ fontSize: 11, color: C.text, fontFamily: sans }}>{tier}</span>
+                    <span style={{ fontSize: 12, color: col, fontFamily: mono, fontWeight: 600 }}>{cnt}</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: C.surface }}>
+                    <div style={{ height: "100%", borderRadius: 2, width: `${pct}%`, background: col, opacity: 0.75 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* SERVICES PER TYPE */}
+          <div style={card()}>
+            <div style={cardLabel}>SERVICES PER TYPE</div>
+            {typeEntries.map(([type, cnt], i) => (
+              <div key={type} style={{ marginBottom: i < typeEntries.length - 1 ? 12 : 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, color: C.text, fontFamily: mono, letterSpacing: "0.05em" }}>{type}</span>
+                  <span style={{ fontSize: 11, color: C.textMuted, fontFamily: mono }}>{cnt}</span>
+                </div>
+                <div style={{ height: 3, borderRadius: 2, background: C.surface }}>
+                  <div style={{ height: "100%", borderRadius: 2, width: `${Math.round((cnt / maxTypeCount) * 100)}%`, background: C.gold, opacity: 0.6 }} />
                 </div>
               </div>
             ))}
           </div>
+
+          {/* TEAM-BELASTING */}
+          <div style={card()}>
+            <div style={cardLabel}>TEAM-BELASTING</div>
+            {kpiTeam.map((m, i) => {
+              const statusCol = m.status === "busy" ? C.orange : m.status === "available" ? C.green : C.textDark;
+              const tasks = m.active_tasks ?? m.active ?? 0;
+              return (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i < kpiTeam.length - 1 ? 12 : 0 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.surface, border: `1px solid ${C.panelBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.gold, fontFamily: mono, flexShrink: 0 }}>{m.avatar}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                      <span style={{ fontSize: 11, color: C.text, fontFamily: sans, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0, marginLeft: 6 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: statusCol }} />
+                        <span style={{ fontSize: 9, color: C.textMuted, fontFamily: mono }}>{tasks} taken</span>
+                      </div>
+                    </div>
+                    <div style={{ height: 3, borderRadius: 2, background: C.surface }}>
+                      <div style={{ height: "100%", borderRadius: 2, width: `${Math.min(100, Math.round((tasks / 4) * 100))}%`, background: statusCol, opacity: 0.7 }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* VLOOT-STATUS */}
+          <div style={card()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={cardLabel}>VLOOT-STATUS</div>
+              <span style={{ fontSize: 20, fontFamily: serif, color: C.text }}>{allVehDash.length} wagens</span>
+            </div>
+            {Object.entries(statusCounts).map(([st, cnt]) => {
+              const col = st === "in-service" ? C.orange : st === "pickup-scheduled" ? C.blue : C.green;
+              return (
+                <div key={st} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${C.panelBorder}` }}>
+                  <span style={{ fontSize: 10, color: C.text, fontFamily: mono }}>{statusLabel[st] ?? st}</span>
+                  <span style={{ fontSize: 12, color: col, fontFamily: mono, fontWeight: 600 }}>{cnt}</span>
+                </div>
+              );
+            })}
+            {brandCounts.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 8, fontFamily: mono, letterSpacing: "0.2em", color: C.textDark, marginBottom: 8 }}>TOP MERKEN</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {brandCounts.map(([brand, cnt]) => (
+                    <div key={brand} style={{ padding: "3px 8px", background: C.surface, border: `1px solid ${C.panelBorder}`, borderRadius: 2, fontSize: 9, color: C.textMuted, fontFamily: mono }}>
+                      {brand} x{cnt}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* AGENDA / EERSTVOLGENDE SERVICES — full width */}
+          <div style={{ ...card(), gridColumn: isMobile ? "1" : "1 / -1" }}>
+            <div style={cardLabel}>AGENDA — EERSTVOLGENDE SERVICES</div>
+            {upcoming.length === 0 ? (
+              <div style={{ fontSize: 12, color: C.textMuted, fontFamily: mono, padding: "8px 0" }}>Geen geplande services</div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 10 }}>
+                {upcoming.map(s => {
+                  const col = s.status === "in-progress" ? C.orange : C.blue;
+                  const d = new Date(s.date);
+                  const day = d.toLocaleDateString("nl-BE", { day: "2-digit" });
+                  const mon = d.toLocaleDateString("nl-BE", { month: "short" }).toUpperCase();
+                  return (
+                    <div key={s.id} style={{ padding: "12px 14px", background: C.surface, border: `1px solid ${col}30`, borderRadius: 4, borderLeft: `2px solid ${col}` }}>
+                      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                        <div style={{ textAlign: "center", minWidth: 28 }}>
+                          <div style={{ fontSize: 18, fontFamily: serif, color: C.text, lineHeight: 1 }}>{day}</div>
+                          <div style={{ fontSize: 7, fontFamily: mono, letterSpacing: "0.1em", color: C.textDark }}>{mon}</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 10, color: col, fontFamily: mono, marginBottom: 3 }}>{s.type}</div>
+                          <div style={{ fontSize: 11, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.clientName}</div>
+                          <div style={{ fontSize: 9, color: C.textDark, fontFamily: mono, marginTop: 2 }}>{s.technician ?? s.tech ?? "—"}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   /* ═══ CLIENTS ═══ */
   const renderClients = () => (
