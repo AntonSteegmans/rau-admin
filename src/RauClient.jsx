@@ -498,7 +498,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
         <div style={{ flex:1, overflowY:"auto", padding: 24, paddingBottom: 80 }}>
           {/* ── WAGENS ── */}
           {nav === "wagens" && (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px,1fr))", gap:14 }}>
+            <div style={{ display:"grid", gridTemplateColumns: isPhone ? "1fr" : "repeat(auto-fill, minmax(320px,1fr))", gap:14 }}>
               {vehicles.length === 0 && <p style={{ color:C.textMuted }}>Geen wagens gevonden</p>}
               {vehicles.map(v => {
                 const vBrand = v.models?.brands?.name || "—"; const vModel = v.models?.name || "—";
@@ -1044,7 +1044,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
                 </div>
 
                 {/* ── KERNCIJFERS ── */}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                <div style={{ display:"grid", gridTemplateColumns: isPhone ? "1fr" : "1fr 1fr", gap:8 }}>
                   {[
                     { label:"COLLECTIEWAARDE", value: fmtVal(sumCurrent), color: C.goldBright },
                     { label:"GEÏNVESTEERD",    value: fmtVal(sumPurchase), color: C.text },
@@ -1259,7 +1259,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
   if (loading) return <div style={{ height:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:mono,fontSize:11,color:C.textDark,letterSpacing:"0.2em" }}>LADEN...</div>;
 
   return (
-    <div style={{ width:"100%", height:"100vh", background:C.bg, color:C.white, fontFamily:sans, display:"flex", flexDirection:"column", overflow:"hidden", position:"relative" }}>
+    <div style={{ width:"100%", height:"100vh", background:C.bg, color:C.white, fontFamily:sans, display:"flex", flexDirection:"column", overflowX:"hidden", overflowY: isPhone ? "auto" : "hidden", position:"relative" }}>
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet"/>
       <style>{`*{box-sizing:border-box} ::-webkit-scrollbar{display:none} input::placeholder,textarea::placeholder{color:#3e3e3a} @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
@@ -1441,7 +1441,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
       </div>
 
       {/* ─── BOTTOM PANELS ─── */}
-      <div style={{ height:200, flexShrink:0, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, padding:"8px 10px 66px" }}>
+      <div style={{ height: isPhone ? "auto" : 200, flexShrink:0, display:"grid", gridTemplateColumns: isPhone ? "1fr" : "1fr 1fr 1fr", gap:8, padding:"8px 10px 66px" }}>
 
         {/* INFO */}
         <div style={{ background:C.panel, border:`1px solid ${C.panelBorder}`, borderRadius:12, padding:"18px 22px", display:"flex", flexDirection:"column", gap:10, overflow:"hidden" }}>
