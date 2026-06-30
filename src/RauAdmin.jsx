@@ -1109,7 +1109,7 @@ export default function AdminDashboard({ user, onSignOut, theme, setTheme }) {
     const bigNum = (col) => ({ fontSize: isMobile ? 24 : 30, fontFamily: serif, fontWeight: 500, color: col, lineHeight: 1 });
 
     return (
-      <div style={{ background: C.bg, overflowY: "auto", height: "100%", padding: isMobile ? "16px 14px 28px" : "56px 28px 36px" }}>
+      <div style={{ background: C.bg, overflowY: "auto", height: "100%", padding: isPhone ? "56px 14px 28px" : isMobile ? "16px 14px 28px" : "56px 28px 36px" }}>
 
         {/* PAGE HEADER */}
         <div style={{ marginBottom: isMobile ? 18 : 22, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8 }}>
