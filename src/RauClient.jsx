@@ -854,7 +854,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
                       Voeg je eigen foto's van deze wagen toe — ze blijven hier bewaard.
                     </div>
                   )}
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px,1fr))", gap:10 }}>
+                  <div style={{ display:"grid", gridTemplateColumns: isPhone ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(130px,1fr))", gap:10 }}>
                     {galleryPhotos.map((src, i) => (
                       <div key={i} style={{ position:"relative", paddingTop:"72%", borderRadius:8, overflow:"hidden", border:`1px solid ${C.line}` }}>
                         <img src={src} alt={`Foto ${i+1}`} onClick={() => setLightbox(src)}
@@ -903,7 +903,11 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
                 </div>
 
                 {lightbox && (
-                  <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.9)", display:"flex", alignItems:"center", justifyContent:"center", padding:30, cursor:"zoom-out" }}>
+                  <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.9)", display:"flex", alignItems:"center", justifyContent:"center", padding: isPhone ? 12 : 30, cursor:"zoom-out" }}>
+                    <div onClick={(e)=>{ e.stopPropagation(); setLightbox(null); }}
+                      style={{ position:"absolute", top:16, right:16, width:44, height:44, borderRadius:"50%", background:"rgba(0,0,0,0.55)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:10 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </div>
                     <img src={lightbox} alt="Foto" style={{ maxWidth:"100%", maxHeight:"100%", borderRadius:8, boxShadow:"0 20px 80px rgba(0,0,0,0.7)" }} />
                   </div>
                 )}
