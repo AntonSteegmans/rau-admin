@@ -9,6 +9,7 @@ import { estimateValuation } from "./demo/valuation.js";
 import { aiValuation, isLiveEnabled } from "./demo/aiValuation.js";
 import { DARK, LIGHT } from "./demo/theme";
 import { getPhotos, addPhotos, removePhoto, fileToDataUrl } from "./demo/gallery";
+import { useViewport } from "./demo/useViewport";
 
 /* ═══════════════════════════════════════════
    TOKENS
@@ -215,6 +216,8 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
   // AI-waarderingen: map van vehicle.id → schatting object
   const [valuations, setValuations] = useState({});
 
+  const { isPhone } = useViewport();
+
   useEffect(() => { if (clientId) loadAll(); else setLoading(false); }, [clientId]);
 
   // Fotogalerij per wagen (lokaal opgeslagen).
@@ -265,7 +268,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
 
   // 3D scene lifecycle
   const vehicle = vehicles[carIdx % Math.max(1, vehicles.length)] ?? null;
-  const displayMode = vehicle?.display_mode || "3d";
+  const displayMode = isPhone ? "image" : (vehicle?.display_mode || "3d");
   const modelPath = vehicle?.models?.model_3d_path ?? null;
   const modelUrl  = modelPath ? supabase.storage.from("3d-models").getPublicUrl(modelPath).data.publicUrl : null;
   const imageUrl  = vehicle?.image_path ? supabase.storage.from("3d-models").getPublicUrl(vehicle.image_path).data.publicUrl : null;
@@ -1314,7 +1317,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
       </header>
 
       {/* ─── HERO ─── */}
-      <div style={{ height:"52vh", maxHeight:460, position:"relative", overflow:"hidden", flexShrink:0 }}>
+      <div style={{ height: isPhone ? "38vh" : "52vh", maxHeight: isPhone ? 320 : 460, position:"relative", overflow:"hidden", flexShrink:0 }}>
 
         {/* Afbeelding modus */}
         {displayMode === "image" ? (
@@ -1366,34 +1369,34 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
         <div style={{ position:"absolute", bottom:0, left:0, right:0, height:160, background: theme === "light" ? "linear-gradient(transparent, rgba(244,242,238,0.9))" : "linear-gradient(transparent, rgba(8,8,8,0.9))", pointerEvents:"none", zIndex:2 }}/>
 
         {/* Welcome text — top left */}
-        <div style={{ position:"absolute", top:28, left:36, zIndex:5, animation:"fadeUp 0.7s ease both" }}>
-          <div style={{ fontSize:36, fontWeight:300, color:C.white, letterSpacing:"-0.01em", lineHeight:1.1 }}>
+        <div style={{ position:"absolute", top: isPhone ? 18 : 28, left: isPhone ? 18 : 36, right: isPhone ? 18 : "auto", zIndex:5, animation:"fadeUp 0.7s ease both" }}>
+          <div style={{ fontSize: isPhone ? 24 : 36, fontWeight:300, color:C.white, letterSpacing:"-0.01em", lineHeight:1.1 }}>
             Welkom terug, {firstName}
           </div>
         </div>
 
         {/* Value — top right */}
         {vehicle?.value > 0 && (
-          <div style={{ position:"absolute", top:28, right:36, zIndex:5, textAlign:"right", animation:"fadeUp 0.7s ease 0.1s both" }}>
+          <div style={{ position:"absolute", top: isPhone ? 18 : 28, right: isPhone ? 18 : 36, zIndex:5, textAlign:"right", animation:"fadeUp 0.7s ease 0.1s both" }}>
             <div style={{ fontSize:9, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:4 }}>WAARDE</div>
             <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"flex-end" }}>
               <div style={{ width:0, height:0, borderLeft:"5px solid transparent", borderRight:"5px solid transparent", borderBottom:`7px solid ${C.gold}`, marginBottom:2 }}/>
-              <span style={{ fontSize:24, color:C.white, fontFamily:sans, fontWeight:300 }}>{fmtVal(vehicle.value)}</span>
+              <span style={{ fontSize: isPhone ? 18 : 24, color:C.white, fontFamily:sans, fontWeight:300 }}>{fmtVal(vehicle.value)}</span>
             </div>
           </div>
         )}
 
         {/* Car name — bottom left */}
-        <div style={{ position:"absolute", bottom:24, left:36, zIndex:5, animation:"fadeUp 0.7s ease 0.15s both" }}>
+        <div style={{ position:"absolute", bottom:24, left: isPhone ? 18 : 36, zIndex:5, animation:"fadeUp 0.7s ease 0.15s both" }}>
           <div style={{ fontSize:10, letterSpacing:"0.3em", color:C.textMuted, fontFamily:mono, marginBottom:6 }}>IN FOCUS</div>
-          <div style={{ fontSize:36, fontFamily:serif, fontWeight:400, color:C.white, lineHeight:1, marginBottom:10 }}>
+          <div style={{ fontSize: isPhone ? 24 : 36, fontFamily:serif, fontWeight:400, color:C.white, lineHeight:1, marginBottom:10 }}>
             {brandName} {modelName || "—"}
           </div>
           {vehicle?.status && <StatusBadge status={vehicle.status}/>}
         </div>
 
         {/* Action buttons — bottom right */}
-        <div style={{ position:"absolute", bottom:28, right:36, zIndex:5, display:"flex", gap:10 }}>
+        <div style={{ position:"absolute", bottom:28, right: isPhone ? 18 : 36, zIndex:5, display:"flex", gap:10 }}>
           <div onClick={()=>setNav("wagens")} title="Mijn wagens" style={{ width:38,height:38,borderRadius:"50%",background:C.hover,border:`1px solid ${C.line}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.2s" }}
             onMouseEnter={e=>{e.currentTarget.style.background=C.surface}}
             onMouseLeave={e=>{e.currentTarget.style.background=C.hover}}>
