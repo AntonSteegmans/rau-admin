@@ -10,6 +10,7 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContai
 import { supabase } from "./supabase";
 import { DARK, LIGHT } from "./demo/theme";
 import { seedData } from "./demo/seed";
+import { useViewport } from "./demo/useViewport";
 
 /* ═══════════════════════════════════════════
    DESIGN TOKENS
@@ -589,17 +590,11 @@ const ChartTip = ({ active, payload }) => {
    ═══════════════════════════════════════════ */
 export default function AdminDashboard({ user, onSignOut, theme, setTheme }) {
   C = (theme === "light" ? LIGHT : DARK);
-  // Mobile / desktop detection
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 900);
-  useEffect(() => {
-    const onResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      setIsDesktop(window.innerWidth >= 900);
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  // Viewport-zones via gedeelde hook (consistente breakpoints met het klantportaal).
+  const vp = useViewport();
+  const isMobile = vp.isPhone || vp.isTablet; // < 1024px → mobiel gedrag (was < 768)
+  const isDesktop = vp.isDesktop;             // ≥ 1024px (was ≥ 900)
+  const isPhone = vp.isPhone;                 // ≤ 640px → extra telefoon-polish
 
   const [sideOpen, setSideOpen] = useState(!isMobile);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1128,7 +1123,7 @@ export default function AdminDashboard({ user, onSignOut, theme, setTheme }) {
         </div>
 
         {/* KPI STRIP */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 14 : 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isPhone ? "1fr 1fr" : (isMobile ? "repeat(3, 1fr)" : "repeat(5, 1fr)"), gap: isPhone ? 10 : 12, marginBottom: isPhone ? 14 : 18 }}>
           {[
             { label: "ACTIEVE KLANTEN",    value: activeClients,                                 color: C.green },
             { label: "MAANDELIJKSE OMZET", value: `€ ${monthlyRevenue.toLocaleString("nl-BE")}`, color: C.gold },
@@ -1338,7 +1333,7 @@ export default function AdminDashboard({ user, onSignOut, theme, setTheme }) {
             {upcoming.length === 0 ? (
               <div style={{ fontSize: 12, color: C.textMuted, fontFamily: mono, padding: "8px 0" }}>Geen geplande services</div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isPhone ? "1fr" : (isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)"), gap: 10 }}>
                 {upcoming.map(s => {
                   const col = s.status === "in-progress" ? C.orange : C.blue;
                   const d = new Date(s.date);
