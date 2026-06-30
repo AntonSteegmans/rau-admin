@@ -703,7 +703,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
                       </div>
                     )}
                     {/* Overlay info */}
-                    <div style={{ position:"absolute", bottom:18, left:22, zIndex:5 }}>
+                    <div style={{ position:"absolute", bottom:18, left:22, zIndex:5, textShadow: theme === "light" ? "0 1px 10px rgba(255,255,255,0.75), 0 0 3px rgba(255,255,255,0.9)" : "none" }}>
                       <div style={{ fontSize:9, letterSpacing:"0.28em", color:C.textDark, fontFamily:mono }}>{vBrand.toUpperCase()}</div>
                       <div style={{ fontSize:28, fontFamily:serif, color:C.white, lineHeight:1.1, marginTop:2 }}>{vModel}</div>
                     </div>
@@ -1373,7 +1373,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
         <div style={{ position:"absolute", bottom:0, left:0, right:0, height:160, background: theme === "light" ? "linear-gradient(transparent, rgba(244,242,238,0.9))" : "linear-gradient(transparent, rgba(8,8,8,0.9))", pointerEvents:"none", zIndex:2 }}/>
 
         {/* Welcome text — top left */}
-        <div style={{ position:"absolute", top: isPhone ? 18 : 28, left: isPhone ? 18 : 36, right: isPhone ? 18 : "auto", zIndex:5, animation:"fadeUp 0.7s ease both" }}>
+        <div style={{ position:"absolute", top: isPhone ? 18 : 28, left: isPhone ? 18 : 36, right: isPhone ? 18 : "auto", zIndex:5, animation:"fadeUp 0.7s ease both", textShadow: theme === "light" ? "0 1px 10px rgba(255,255,255,0.75), 0 0 3px rgba(255,255,255,0.9)" : "none" }}>
           <div style={{ fontSize: isPhone ? 24 : 36, fontWeight:300, color:C.white, letterSpacing:"-0.01em", lineHeight:1.1 }}>
             Welkom terug, {firstName}
           </div>
@@ -1381,7 +1381,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
 
         {/* Value — top right */}
         {vehicle?.value > 0 && (
-          <div style={{ position:"absolute", top: isPhone ? 18 : 28, right: isPhone ? 18 : 36, zIndex:5, textAlign:"right", animation:"fadeUp 0.7s ease 0.1s both" }}>
+          <div style={{ position:"absolute", top: isPhone ? 18 : 28, right: isPhone ? 18 : 36, zIndex:5, textAlign:"right", animation:"fadeUp 0.7s ease 0.1s both", textShadow: theme === "light" ? "0 1px 10px rgba(255,255,255,0.75), 0 0 3px rgba(255,255,255,0.9)" : "none" }}>
             <div style={{ fontSize:9, letterSpacing:"0.25em", color:C.textMuted, fontFamily:mono, marginBottom:4 }}>WAARDE</div>
             <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"flex-end" }}>
               <div style={{ width:0, height:0, borderLeft:"5px solid transparent", borderRight:"5px solid transparent", borderBottom:`7px solid ${C.gold}`, marginBottom:2 }}/>
@@ -1391,7 +1391,7 @@ export default function ClientPortal({ user, clientId, onSignOut, theme, setThem
         )}
 
         {/* Car name — bottom left */}
-        <div style={{ position:"absolute", bottom:24, left: isPhone ? 18 : 36, zIndex:5, animation:"fadeUp 0.7s ease 0.15s both" }}>
+        <div style={{ position:"absolute", bottom:24, left: isPhone ? 18 : 36, zIndex:5, animation:"fadeUp 0.7s ease 0.15s both", textShadow: theme === "light" ? "0 1px 10px rgba(255,255,255,0.75), 0 0 3px rgba(255,255,255,0.9)" : "none" }}>
           <div style={{ fontSize:10, letterSpacing:"0.3em", color:C.textMuted, fontFamily:mono, marginBottom:6 }}>IN FOCUS</div>
           <div style={{ fontSize: isPhone ? 24 : 36, fontFamily:serif, fontWeight:400, color:C.white, lineHeight:1, marginBottom:10 }}>
             {brandName} {modelName || "—"}
